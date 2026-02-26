@@ -104,7 +104,7 @@ export const feedbackTicketSchema = z.object({
 
 export const feedbackReplySchema = z.object({
   message: z.string().min(1, 'El mensaje es requerido').max(2000, 'Máximo 2000 caracteres'),
-  is_internal: z.boolean().optional().default(false),
+  is_internal: z.boolean(),
 })
 
 export type ProfileEditFormData = z.infer<typeof profileEditSchema>
