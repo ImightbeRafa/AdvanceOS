@@ -24,7 +24,8 @@ async function requireAdmin() {
 export async function getAccountingSummary(periodStart?: string, periodEnd?: string) {
   const { supabase } = await requireAdmin()
 
-  let paymentsQ = supabase.from('payments').select('amount_gross, amount_net, fee_amount, payment_date')
+  // All financial queries anchor on payment_date for consistency
+  let paymentsQ = supabase.from('payments').select('id, set_id, amount_gross, amount_net, fee_amount, payment_date')
   if (periodStart) paymentsQ = paymentsQ.gte('payment_date', periodStart)
   if (periodEnd) paymentsQ = paymentsQ.lte('payment_date', periodEnd)
 
@@ -32,10 +33,7 @@ export async function getAccountingSummary(periodStart?: string, periodEnd?: str
   if (periodStart) expensesQ = expensesQ.gte('date', periodStart)
   if (periodEnd) expensesQ = expensesQ.lte('date', periodEnd)
 
-  let commissionsQ = supabase.from('commissions').select('amount, is_paid, created_at')
-  if (periodStart) commissionsQ = commissionsQ.gte('created_at', startOfDayCR(periodStart))
-  if (periodEnd) commissionsQ = commissionsQ.lte('created_at', endOfDayCR(periodEnd))
-
+  let commissionsQ = supabase.from('commissions').select('amount, is_paid, payment_id, created_at')
   let salariesQ = supabase.from('salary_payments').select('amount, status, created_at')
   if (periodStart) salariesQ = salariesQ.gte('created_at', startOfDayCR(periodStart))
   if (periodEnd) salariesQ = salariesQ.lte('created_at', endOfDayCR(periodEnd))
@@ -44,10 +42,10 @@ export async function getAccountingSummary(periodStart?: string, periodEnd?: str
   if (periodStart) adSpendQ = adSpendQ.gte('period_start', periodStart)
   if (periodEnd) adSpendQ = adSpendQ.lte('period_start', periodEnd)
 
-  let closedDealsQ = supabase.from('deals').select('revenue_total, outcome, created_at').eq('outcome', 'closed')
-  if (periodStart) closedDealsQ = closedDealsQ.gte('created_at', startOfDayCR(periodStart))
-  if (periodEnd) closedDealsQ = closedDealsQ.lte('created_at', endOfDayCR(periodEnd))
+  // Deals fetched without date filter — we cross-reference with payments below
+  const closedDealsQ = supabase.from('deals').select('revenue_total, outcome, set_id').eq('outcome', 'closed')
 
+  // Activity metrics still use created_at (measures when the activity happened)
   let allDealsQ = supabase.from('deals').select('id, created_at')
   if (periodStart) allDealsQ = allDealsQ.gte('created_at', startOfDayCR(periodStart))
   if (periodEnd) allDealsQ = allDealsQ.lte('created_at', endOfDayCR(periodEnd))
@@ -67,10 +65,10 @@ export async function getAccountingSummary(periodStart?: string, periodEnd?: str
   const [
     { data: payments },
     { data: expenses },
-    { data: commissions },
+    { data: allCommissions },
     { data: salaryPayments },
     { data: adSpends },
-    { data: closedDeals },
+    { data: allClosedDeals },
     { data: allDeals },
     { count: setsTotal },
     { count: clientsTotal },
@@ -80,14 +78,21 @@ export async function getAccountingSummary(periodStart?: string, periodEnd?: str
     closedDealsQ, allDealsQ, setsQ, clientsQ, manualTxQ,
   ])
 
-  const closedDealsCount = (closedDeals ?? []).length
-  const revenue = (closedDeals ?? []).reduce((sum, d) => sum + Number(d.revenue_total ?? 0), 0)
+  // Anchor deals and commissions to payment_date via payments in period
+  const paymentIds = new Set((payments ?? []).map(p => p.id as string))
+  const paymentSetIds = new Set((payments ?? []).map(p => p.set_id as string))
+
+  const closedDeals = (allClosedDeals ?? []).filter(d => paymentSetIds.has(d.set_id))
+  const commissions = (allCommissions ?? []).filter(c => paymentIds.has(c.payment_id))
+
+  const closedDealsCount = closedDeals.length
+  const revenue = closedDeals.reduce((sum, d) => sum + Number(d.revenue_total ?? 0), 0)
   const cashCollected = (payments ?? []).reduce((sum, p) => sum + Number(p.amount_gross), 0)
   const cashNet = (payments ?? []).reduce((sum, p) => sum + Number(p.amount_net), 0)
   const bankFees = (payments ?? []).reduce((sum, p) => sum + Number(p.fee_amount), 0)
   const totalExpenses = (expenses ?? []).reduce((sum, e) => sum + Number(e.amount_usd), 0)
-  const totalCommissions = (commissions ?? []).reduce((sum, c) => sum + Number(c.amount), 0)
-  const unpaidCommissions = (commissions ?? []).filter((c) => !c.is_paid).reduce((sum, c) => sum + Number(c.amount), 0)
+  const totalCommissions = commissions.reduce((sum, c) => sum + Number(c.amount), 0)
+  const unpaidCommissions = commissions.filter((c) => !c.is_paid).reduce((sum, c) => sum + Number(c.amount), 0)
   const totalSalaries = (salaryPayments ?? []).reduce((sum, s) => sum + Number(s.amount), 0)
   const totalAdSpend = (adSpends ?? []).reduce((sum, a) => sum + Number(a.amount_usd), 0)
 

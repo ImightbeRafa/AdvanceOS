@@ -103,7 +103,7 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
   const monthStart = useMemo(() => monthStartCR(), [])
 
   const setsAgendadosMTD = useMemo(() =>
-    sets.filter((s) => s.scheduled_at.split('T')[0] >= monthStart),
+    sets.filter((s) => toCR(s.scheduled_at).toISOString().split('T')[0] >= monthStart),
     [sets, monthStart]
   )
 
@@ -117,8 +117,8 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
     for (const s of sets) {
       const deal = getLatestDeal(s)
       if (!deal) continue
-      const dealDate = deal.created_at.split('T')[0]
-      if (dealDate >= monthStart) {
+      const dealDateCR = toCR(deal.created_at).toISOString().split('T')[0]
+      if (dealDateCR >= monthStart) {
         result.push({ set: s, deal })
       }
     }
