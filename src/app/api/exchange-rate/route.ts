@@ -28,7 +28,8 @@ export async function GET(request: Request) {
     const crcRate = data.rates?.CRC ?? 530
 
     const supabase = await createServiceClient()
-    const today = new Date().toISOString().split('T')[0]
+    const { todayCR } = await import('@/lib/utils/dates')
+    const today = todayCR()
 
     await supabase
       .from('exchange_rates')

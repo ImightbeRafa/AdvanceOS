@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { todayCR } from '@/lib/utils/dates'
 
 interface ExpenseModalProps {
   open: boolean
@@ -26,7 +27,7 @@ export function ExpenseModal({ open, onOpenChange }: ExpenseModalProps) {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
     defaultValues: {
-      date: new Date().toISOString().split('T')[0],
+      date: todayCR(),
       recurring: false,
     },
   })

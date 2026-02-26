@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { PaymentFormData } from '@/lib/schemas'
+import { todayCR } from '@/lib/utils/dates'
 import { calculateTilopayFee, calculateCommission } from '@/lib/utils/currency'
 
 export async function registerPayment(setId: string, clientId: string | null, data: PaymentFormData) {
@@ -133,7 +134,7 @@ export async function markCommissionPaid(commissionId: string) {
     .from('commissions')
     .update({
       is_paid: true,
-      paid_date: new Date().toISOString().split('T')[0],
+      paid_date: todayCR(),
     })
     .eq('id', commissionId)
 
@@ -160,7 +161,7 @@ export async function markSalaryPaid(salaryPaymentId: string) {
     .from('salary_payments')
     .update({
       status: 'pagado',
-      paid_date: new Date().toISOString().split('T')[0],
+      paid_date: todayCR(),
     })
     .eq('id', salaryPaymentId)
 

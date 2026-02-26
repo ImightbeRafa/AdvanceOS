@@ -22,6 +22,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { todayCR } from '@/lib/utils/dates'
 
 interface PaymentModalProps {
   set: Set
@@ -37,7 +38,7 @@ export function PaymentModal({ set, clientId, open, onOpenChange }: PaymentModal
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<PaymentFormData>({
     resolver: zodResolver(paymentSchema),
     defaultValues: {
-      payment_date: new Date().toISOString().split('T')[0],
+      payment_date: todayCR(),
     },
   })
 

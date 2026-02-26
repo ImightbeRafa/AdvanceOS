@@ -2,6 +2,7 @@ import { createClient } from '@/lib/supabase/server'
 import { getAuthProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getAccountingSummary } from '@/lib/actions/accounting'
+import { todayCR, monthStartCR } from '@/lib/utils/dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -37,11 +38,10 @@ export default async function HomePage() {
     case 'closer':
       return <CloserDashboard profile={profile} sets={sets ?? []} commissionsTotal={myCommissionsTotal} />
     case 'admin': {
-      const now = new Date()
-      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+      const monthStart = monthStartCR()
+      const today = todayCR()
       const [accountingSummary, { data: payments }] = await Promise.all([
-        getAccountingSummary(monthStart, monthEnd),
+        getAccountingSummary(monthStart, today),
         supabase
           .from('payments')
           .select('set_id, amount_gross'),

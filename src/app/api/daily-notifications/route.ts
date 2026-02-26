@@ -1,5 +1,6 @@
 import { createServiceClient } from '@/lib/supabase/server'
 import { NextResponse } from 'next/server'
+import { todayCR, startOfDayCR, endOfDayCR } from '@/lib/utils/dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -12,15 +13,15 @@ export async function GET(request: Request) {
   }
 
   const supabase = await createServiceClient()
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayCR()
   let followUpCount = 0
 
   const { data: followUpDeals } = await supabase
     .from('deals')
     .select('id, set_id, follow_up_date, sets!inner(closer_id, prospect_name)')
     .eq('outcome', 'follow_up')
-    .gte('follow_up_date', `${today}T00:00:00`)
-    .lte('follow_up_date', `${today}T23:59:59`)
+    .gte('follow_up_date', startOfDayCR(today))
+    .lte('follow_up_date', endOfDayCR(today))
 
   for (const deal of followUpDeals ?? []) {
     const set = deal.sets as unknown as { closer_id: string; prospect_name: string }
@@ -31,7 +32,7 @@ export async function GET(request: Request) {
       .select('id')
       .eq('user_id', set.closer_id)
       .eq('type', 'follow_up_today')
-      .gte('created_at', `${today}T00:00:00`)
+      .gte('created_at', startOfDayCR(today))
       .like('action_url', `%${deal.set_id}%`)
       .limit(1)
 

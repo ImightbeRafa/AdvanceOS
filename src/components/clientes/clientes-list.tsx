@@ -6,7 +6,7 @@ import type { Client, Profile, UserRole } from '@/types'
 import { DataTable, type Column } from '@/components/shared/data-table'
 import { StatusChip } from '@/components/shared/status-chip'
 import { CLIENT_STATUS_LABELS, CLIENT_STATUS_COLORS, SERVICE_LABELS } from '@/lib/constants'
-import { formatDate, formatShortDate } from '@/lib/utils/dates'
+import { formatDate, formatShortDate, todayCR } from '@/lib/utils/dates'
 import { formatUSD } from '@/lib/utils/currency'
 import {
   Select,
@@ -43,7 +43,7 @@ interface ClientesListProps {
 
 function getCurrentPhase(phases: PhaseInfo[]): string | null {
   if (phases.length === 0) return null
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayCR()
   const active = phases.find((p) => p.start_date <= today && p.end_date >= today)
   if (active) return active.phase_name
   const future = phases.find((p) => p.start_date > today)

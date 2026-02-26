@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { toast } from 'sonner'
+import { todayCR } from '@/lib/utils/dates'
 
 interface AdSpendModalProps {
   open: boolean
@@ -21,7 +22,7 @@ export function AdSpendModal({ open, onOpenChange }: AdSpendModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayCR()
 
   const { register, handleSubmit, formState: { errors } } = useForm<AdSpendFormData>({
     resolver: zodResolver(adSpendSchema),

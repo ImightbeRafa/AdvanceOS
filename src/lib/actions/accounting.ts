@@ -3,6 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { ExpenseFormData, AdSpendFormData, ManualTransactionFormData } from '@/lib/schemas'
+import { startOfDayCR, endOfDayCR, todayCR } from '@/lib/utils/dates'
 
 async function requireAdmin() {
   const supabase = await createClient()
@@ -32,32 +33,32 @@ export async function getAccountingSummary(periodStart?: string, periodEnd?: str
   if (periodEnd) expensesQ = expensesQ.lte('date', periodEnd)
 
   let commissionsQ = supabase.from('commissions').select('amount, is_paid, created_at')
-  if (periodStart) commissionsQ = commissionsQ.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) commissionsQ = commissionsQ.lte('created_at', `${periodEnd}T23:59:59`)
+  if (periodStart) commissionsQ = commissionsQ.gte('created_at', startOfDayCR(periodStart))
+  if (periodEnd) commissionsQ = commissionsQ.lte('created_at', endOfDayCR(periodEnd))
 
   let salariesQ = supabase.from('salary_payments').select('amount, status, created_at')
-  if (periodStart) salariesQ = salariesQ.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) salariesQ = salariesQ.lte('created_at', `${periodEnd}T23:59:59`)
+  if (periodStart) salariesQ = salariesQ.gte('created_at', startOfDayCR(periodStart))
+  if (periodEnd) salariesQ = salariesQ.lte('created_at', endOfDayCR(periodEnd))
 
   let adSpendQ = supabase.from('ad_spend').select('amount_usd, period_start')
   if (periodStart) adSpendQ = adSpendQ.gte('period_start', periodStart)
   if (periodEnd) adSpendQ = adSpendQ.lte('period_start', periodEnd)
 
   let closedDealsQ = supabase.from('deals').select('revenue_total, outcome, created_at').eq('outcome', 'closed')
-  if (periodStart) closedDealsQ = closedDealsQ.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) closedDealsQ = closedDealsQ.lte('created_at', `${periodEnd}T23:59:59`)
+  if (periodStart) closedDealsQ = closedDealsQ.gte('created_at', startOfDayCR(periodStart))
+  if (periodEnd) closedDealsQ = closedDealsQ.lte('created_at', endOfDayCR(periodEnd))
 
   let allDealsQ = supabase.from('deals').select('id, created_at')
-  if (periodStart) allDealsQ = allDealsQ.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) allDealsQ = allDealsQ.lte('created_at', `${periodEnd}T23:59:59`)
+  if (periodStart) allDealsQ = allDealsQ.gte('created_at', startOfDayCR(periodStart))
+  if (periodEnd) allDealsQ = allDealsQ.lte('created_at', endOfDayCR(periodEnd))
 
   let setsQ = supabase.from('sets').select('*', { count: 'exact', head: true })
-  if (periodStart) setsQ = setsQ.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) setsQ = setsQ.lte('created_at', `${periodEnd}T23:59:59`)
+  if (periodStart) setsQ = setsQ.gte('created_at', startOfDayCR(periodStart))
+  if (periodEnd) setsQ = setsQ.lte('created_at', endOfDayCR(periodEnd))
 
   let clientsQ = supabase.from('clients').select('*', { count: 'exact', head: true })
-  if (periodStart) clientsQ = clientsQ.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) clientsQ = clientsQ.lte('created_at', `${periodEnd}T23:59:59`)
+  if (periodStart) clientsQ = clientsQ.gte('created_at', startOfDayCR(periodStart))
+  if (periodEnd) clientsQ = clientsQ.lte('created_at', endOfDayCR(periodEnd))
 
   let manualTxQ = supabase.from('manual_transactions').select('type, amount_usd, date')
   if (periodStart) manualTxQ = manualTxQ.gte('date', periodStart)
@@ -198,7 +199,7 @@ export async function markCommissionPaid(commissionId: string) {
     .from('commissions')
     .update({
       is_paid: true,
-      paid_date: new Date().toISOString().split('T')[0],
+      paid_date: todayCR(),
     })
     .eq('id', commissionId)
 

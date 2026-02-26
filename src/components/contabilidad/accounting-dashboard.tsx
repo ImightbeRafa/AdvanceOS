@@ -3,14 +3,16 @@
 import { useState, useTransition } from 'react'
 import { useRouter } from 'next/navigation'
 import { formatUSD, formatCurrency } from '@/lib/utils/currency'
-import { formatDate } from '@/lib/utils/dates'
+import { formatDate, nowCR, todayCR, monthStartCR, CR_TZ } from '@/lib/utils/dates'
+import { TZDate } from '@date-fns/tz'
+import { format as fmtDate } from 'date-fns'
 import { useCurrencyStore } from '@/lib/hooks/use-currency'
 import { CurrencyToggle } from '@/components/shared/currency-toggle'
 import { StatusChip } from '@/components/shared/status-chip'
 import { Button } from '@/components/ui/button'
 import { markCommissionPaid, getAccountingSummary, deleteManualTransaction } from '@/lib/actions/accounting'
 import { toast } from 'sonner'
-import { TrendingUp, DollarSign, Receipt, Users, Target, Minus, ArrowUpDown, Trash2 } from 'lucide-react'
+import { TrendingUp, DollarSign, Receipt, Users, Target, Minus, ArrowUpDown, Trash2, ChevronDown, ChevronUp } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const ExpenseModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void }>(
@@ -59,24 +61,24 @@ interface AccountingDashboardProps {
 }
 
 function getPeriodDates(period: PeriodKey): { start: string; end: string } {
-  const now = new Date()
-  const today = now.toISOString().split('T')[0]
+  const now = nowCR()
+  const today = todayCR()
   switch (period) {
     case 'hoy':
       return { start: today, end: today }
     case '7d': {
-      const d = new Date(now)
+      const d = new TZDate(now, CR_TZ)
       d.setDate(d.getDate() - 7)
-      return { start: d.toISOString().split('T')[0], end: today }
+      return { start: fmtDate(d, 'yyyy-MM-dd'), end: today }
     }
     case '30d': {
-      const d = new Date(now)
+      const d = new TZDate(now, CR_TZ)
       d.setDate(d.getDate() - 30)
-      return { start: d.toISOString().split('T')[0], end: today }
+      return { start: fmtDate(d, 'yyyy-MM-dd'), end: today }
     }
     case 'mtd':
     default:
-      return { start: new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0], end: today }
+      return { start: monthStartCR(), end: today }
   }
 }
 
@@ -94,7 +96,9 @@ export function AccountingDashboard({ summary: initialSummary, expenses, manualT
   const [showAdSpendModal, setShowAdSpendModal] = useState(false)
   const [showManualTxModal, setShowManualTxModal] = useState(false)
   const [payingId, setPayingId] = useState<string | null>(null)
+  const [payingAllMember, setPayingAllMember] = useState<string | null>(null)
   const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [expandedMembers, setExpandedMembers] = useState<Record<string, boolean>>({})
   const [period, setPeriod] = useState<PeriodKey>(initialPeriod)
   const [summary, setSummary] = useState<AccountingSummary>(initialSummary)
   const [isPending, startTransition] = useTransition()
@@ -124,6 +128,40 @@ export function AccountingDashboard({ summary: initialSummary, expenses, manualT
       setPayingId(null)
     }
   }
+
+  async function handlePayAllForMember(memberCommissions: typeof unpaidCommissions) {
+    const memberId = memberCommissions[0]?.team_member?.full_name ?? ''
+    setPayingAllMember(memberId)
+    try {
+      for (const c of memberCommissions) {
+        await markCommissionPaid(c.id)
+      }
+      toast.success(`Todas las comisiones de ${memberId} marcadas como pagadas`)
+      router.refresh()
+    } catch {
+      toast.error('Error al pagar comisiones')
+    } finally {
+      setPayingAllMember(null)
+    }
+  }
+
+  function toggleMember(memberId: string) {
+    setExpandedMembers((prev) => ({ ...prev, [memberId]: !prev[memberId] }))
+  }
+
+  const groupedCommissions = unpaidCommissions.reduce<
+    { memberId: string; memberName: string; total: number; commissions: typeof unpaidCommissions }[]
+  >((groups, c) => {
+    const memberId = c.team_member_id ?? 'unknown'
+    let group = groups.find((g) => g.memberId === memberId)
+    if (!group) {
+      group = { memberId, memberName: c.team_member?.full_name ?? 'Desconocido', total: 0, commissions: [] }
+      groups.push(group)
+    }
+    group.total += Number(c.amount)
+    group.commissions.push(c)
+    return groups
+  }, [])
 
   async function handleDeleteTransaction(id: string) {
     setDeletingId(id)
@@ -266,24 +304,55 @@ export function AccountingDashboard({ summary: initialSummary, expenses, manualT
           <h3 className="text-sm font-medium mb-2">
             Comisiones pendientes ({unpaidCommissions.length})
           </h3>
-          {unpaidCommissions.length === 0 ? (
+          {groupedCommissions.length === 0 ? (
             <p className="text-sm text-muted-foreground">Sin comisiones pendientes.</p>
           ) : (
-            <div className="space-y-2 max-h-60 overflow-y-auto scrollbar-thin">
-              {unpaidCommissions.map((c) => (
-                <div key={c.id} className="flex items-center gap-2 text-sm">
-                  <span className="flex-1">{c.team_member?.full_name ?? '—'}</span>
-                  <StatusChip label={c.role} colorClass="bg-muted text-muted-foreground" />
-                  <span className="font-medium">{formatUSD(c.amount)}</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs"
-                    disabled={payingId === c.id}
-                    onClick={() => handlePayCommission(c.id)}
+            <div className="space-y-1 max-h-80 overflow-y-auto scrollbar-thin">
+              {groupedCommissions.map((group) => (
+                <div key={group.memberId}>
+                  <button
+                    type="button"
+                    className="flex items-center gap-2 text-sm w-full rounded-lg p-2 hover:bg-surface-2 transition-colors"
+                    onClick={() => toggleMember(group.memberId)}
                   >
-                    Pagar
-                  </Button>
+                    {expandedMembers[group.memberId] ? (
+                      <ChevronUp className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    ) : (
+                      <ChevronDown className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                    )}
+                    <span className="flex-1 text-left font-medium">{group.memberName}</span>
+                    <span className="text-xs text-muted-foreground">{group.commissions.length} comisión{group.commissions.length !== 1 ? 'es' : ''}</span>
+                    <span className="font-semibold">{fmt(group.total)}</span>
+                  </button>
+                  {expandedMembers[group.memberId] && (
+                    <div className="ml-6 border-l border-border pl-3 space-y-1.5 pb-2">
+                      {group.commissions.map((c) => (
+                        <div key={c.id} className="flex items-center gap-2 text-sm py-1">
+                          <StatusChip label={c.role === 'setter' ? 'Setter' : 'Closer'} colorClass="bg-muted text-muted-foreground" />
+                          <span className="flex-1 text-muted-foreground text-xs">{c.payment?.set?.prospect_name ?? 'N/A'}</span>
+                          <span className="font-medium">{formatUSD(c.amount)}</span>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 text-xs px-2"
+                            disabled={payingId === c.id}
+                            onClick={() => handlePayCommission(c.id)}
+                          >
+                            Pagar
+                          </Button>
+                        </div>
+                      ))}
+                      <Button
+                        size="sm"
+                        variant="default"
+                        className="h-7 text-xs mt-1"
+                        disabled={payingAllMember === group.memberName}
+                        onClick={() => handlePayAllForMember(group.commissions)}
+                      >
+                        Pagar todas ({fmt(group.total)})
+                      </Button>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

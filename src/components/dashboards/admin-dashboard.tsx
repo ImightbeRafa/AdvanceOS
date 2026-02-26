@@ -1,8 +1,9 @@
 'use client'
 
+import { useState, useMemo } from 'react'
 import type { Profile, Set, Deal } from '@/types'
 import { formatUSD } from '@/lib/utils/currency'
-import { isDateToday } from '@/lib/utils/dates'
+import { isDateToday, isDateInWeek, isDateInMonth } from '@/lib/utils/dates'
 import {
   Phone,
   Clock,
@@ -17,6 +18,26 @@ import Link from 'next/link'
 import { StatusChip } from '@/components/shared/status-chip'
 import { SET_STATUS_LABELS, SET_STATUS_COLORS } from '@/lib/constants'
 import { formatDateTime } from '@/lib/utils/dates'
+
+type CallRange = 'hoy' | 'semana' | 'mes'
+
+const CALL_RANGE_LABELS: Record<CallRange, string> = {
+  hoy: 'Hoy',
+  semana: 'Esta semana',
+  mes: 'Este mes',
+}
+
+const CALL_RANGE_TITLES: Record<CallRange, string> = {
+  hoy: 'Llamadas de hoy',
+  semana: 'Llamadas de la semana',
+  mes: 'Llamadas del mes',
+}
+
+const CALL_RANGE_EMPTY: Record<CallRange, string> = {
+  hoy: 'Sin llamadas para hoy.',
+  semana: 'Sin llamadas esta semana.',
+  mes: 'Sin llamadas este mes.',
+}
 
 interface AccountingSummary {
   revenue: number
@@ -34,8 +55,23 @@ interface AdminDashboardProps {
 }
 
 export function AdminDashboard({ profile, sets, accounting, paymentsBySet }: AdminDashboardProps) {
-  const pendingCalls = sets.filter(
-    (s) => ['agendado', 'precall_enviado'].includes(s.status) && isDateToday(s.scheduled_at)
+  const [callRange, setCallRange] = useState<CallRange>('hoy')
+
+  const allPendingSets = useMemo(() =>
+    sets.filter((s) => ['agendado', 'precall_enviado'].includes(s.status)),
+    [sets]
+  )
+
+  const pendingCalls = useMemo(() => {
+    const filter = callRange === 'hoy' ? isDateToday
+      : callRange === 'semana' ? isDateInWeek
+      : isDateInMonth
+    return allPendingSets.filter((s) => filter(s.scheduled_at))
+  }, [allPendingSets, callRange])
+
+  const pendingCallsTodayCount = useMemo(() =>
+    allPendingSets.filter((s) => isDateToday(s.scheduled_at)).length,
+    [allPendingSets]
   )
 
   const followUpsToday = sets.filter((s) => {
@@ -56,6 +92,8 @@ export function AdminDashboard({ profile, sets, accounting, paymentsBySet }: Adm
     ? (accounting.closedDealsCount / accounting.totalDeals * 100)
     : 0
 
+  const maxCallsShown = callRange === 'hoy' ? 5 : 10
+
   return (
     <div className="space-y-6">
       <div>
@@ -65,7 +103,7 @@ export function AdminDashboard({ profile, sets, accounting, paymentsBySet }: Adm
 
       <div className="grid gap-4 sm:grid-cols-3">
         <Link href="/ventas" className="group">
-          <MetricCard icon={Phone} label="Llamadas pendientes hoy" value={String(pendingCalls.length)} />
+          <MetricCard icon={Phone} label="Llamadas pendientes hoy" value={String(pendingCallsTodayCount)} />
         </Link>
         <Link href="/ventas" className="group">
           <MetricCard icon={Clock} label="Follow-ups para hoy" value={String(followUpsToday.length)} />
@@ -93,14 +131,29 @@ export function AdminDashboard({ profile, sets, accounting, paymentsBySet }: Adm
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-surface-1 p-4">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="text-sm font-medium">Llamadas de hoy</h3>
-            <Link href="/ventas"><Button size="sm" variant="outline">Ver ventas</Button></Link>
+            <h3 className="text-sm font-medium">{CALL_RANGE_TITLES[callRange]}</h3>
+            <div className="flex items-center gap-2">
+              <div className="flex gap-1">
+                {(Object.keys(CALL_RANGE_LABELS) as CallRange[]).map((key) => (
+                  <Button
+                    key={key}
+                    size="sm"
+                    variant={callRange === key ? 'default' : 'outline'}
+                    onClick={() => setCallRange(key)}
+                    className="text-xs h-7 px-2"
+                  >
+                    {CALL_RANGE_LABELS[key]}
+                  </Button>
+                ))}
+              </div>
+              <Link href="/ventas"><Button size="sm" variant="outline">Ver ventas</Button></Link>
+            </div>
           </div>
           {pendingCalls.length === 0 ? (
-            <p className="text-sm text-muted-foreground">Sin llamadas para hoy.</p>
+            <p className="text-sm text-muted-foreground">{CALL_RANGE_EMPTY[callRange]}</p>
           ) : (
             <div className="space-y-2">
-              {pendingCalls.slice(0, 5).map((s) => (
+              {pendingCalls.slice(0, maxCallsShown).map((s) => (
                 <Link key={s.id} href="/ventas" className="flex items-center justify-between text-sm hover:bg-surface-2 rounded-lg p-2 -mx-2 transition-colors">
                   <div>
                     <span className="font-medium">{s.prospect_name}</span>
@@ -109,8 +162,8 @@ export function AdminDashboard({ profile, sets, accounting, paymentsBySet }: Adm
                   <StatusChip label={SET_STATUS_LABELS[s.status]} colorClass={SET_STATUS_COLORS[s.status]} />
                 </Link>
               ))}
-              {pendingCalls.length > 5 && (
-                <p className="text-xs text-muted-foreground">+{pendingCalls.length - 5} más</p>
+              {pendingCalls.length > maxCallsShown && (
+                <p className="text-xs text-muted-foreground">+{pendingCalls.length - maxCallsShown} más</p>
               )}
             </div>
           )}

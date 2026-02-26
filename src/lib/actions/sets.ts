@@ -5,6 +5,7 @@ import { revalidatePath } from 'next/cache'
 import type { CreateSetFormData, CloseDealFormData, FollowUpFormData, DisqualifyFormData } from '@/lib/schemas'
 import { VALID_STATUS_TRANSITIONS, ONBOARDING_CHECKLIST_TEMPLATE, ADVANCE90_PHASES } from '@/lib/constants'
 import { calculateTilopayFee, calculateCommission } from '@/lib/utils/currency'
+import { todayCR, nowCR } from '@/lib/utils/dates'
 import type { SetStatus } from '@/types'
 import { addDays, format } from 'date-fns'
 
@@ -166,7 +167,7 @@ export async function createDealClosed(setId: string, data: CloseDealFormData) {
   await supabase.from('onboarding_checklist').insert(checklistItems)
 
   if (data.service_sold === 'advance90') {
-    const startDate = new Date()
+    const startDate = nowCR()
     const phases = ADVANCE90_PHASES.map((phase) => ({
       client_id: client.id,
       phase_name: phase.name,
@@ -200,7 +201,7 @@ export async function createDealClosed(setId: string, data: CloseDealFormData) {
         fee_percentage: feePercentage,
         fee_amount: feeAmount,
         amount_net: netAmount,
-        payment_date: new Date().toISOString().split('T')[0],
+        payment_date: todayCR(),
       })
       .select()
       .single()

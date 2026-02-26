@@ -6,8 +6,9 @@ import { formatUSD } from '@/lib/utils/currency'
 import { markCommissionPaid, markSalaryPaid, generateSalaryPayments } from '@/lib/actions/accounting'
 import { Button } from '@/components/ui/button'
 import { StatusChip } from '@/components/shared/status-chip'
-import { Check, DollarSign, Users, Loader2, Calendar, Download } from 'lucide-react'
+import { Check, DollarSign, Users, Loader2, Calendar, Download, ChevronDown, ChevronUp } from 'lucide-react'
 import { toast } from 'sonner'
+import { todayCR, nowCR } from '@/lib/utils/dates'
 
 interface CommissionRow {
   id: string
@@ -38,10 +39,30 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
   const [tab, setTab] = useState<'comisiones' | 'salarios'>('comisiones')
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
+  const [expandedMembers, setExpandedMembers] = useState<Record<string, boolean>>({})
+  const [payingAllMember, setPayingAllMember] = useState<string | null>(null)
 
   const totalUnpaidCommissions = unpaidCommissions.reduce((s, c) => s + Number(c.amount), 0)
   const pendingSalaries = salaryPayments.filter((s) => s.status === 'pendiente')
   const totalPendingSalaries = pendingSalaries.reduce((s, p) => s + Number(p.amount), 0)
+
+  const groupedCommissions = unpaidCommissions.reduce<
+    { memberId: string; memberName: string; total: number; commissions: CommissionRow[] }[]
+  >((groups, c) => {
+    const memberId = c.team_member?.id ?? 'unknown'
+    let group = groups.find((g) => g.memberId === memberId)
+    if (!group) {
+      group = { memberId, memberName: c.team_member?.full_name ?? 'Desconocido', total: 0, commissions: [] }
+      groups.push(group)
+    }
+    group.total += Number(c.amount)
+    group.commissions.push(c)
+    return groups
+  }, [])
+
+  function toggleMember(memberId: string) {
+    setExpandedMembers((prev) => ({ ...prev, [memberId]: !prev[memberId] }))
+  }
 
   function handleMarkCommissionPaid(id: string) {
     startTransition(async () => {
@@ -51,6 +72,24 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
         router.refresh()
       } catch {
         toast.error('Error al actualizar comisión')
+      }
+    })
+  }
+
+  function handlePayAllForMember(memberCommissions: CommissionRow[]) {
+    const memberName = memberCommissions[0]?.team_member?.full_name ?? ''
+    setPayingAllMember(memberName)
+    startTransition(async () => {
+      try {
+        for (const c of memberCommissions) {
+          await markCommissionPaid(c.id)
+        }
+        toast.success(`Todas las comisiones de ${memberName} marcadas como pagadas`)
+        router.refresh()
+      } catch {
+        toast.error('Error al pagar comisiones')
+      } finally {
+        setPayingAllMember(null)
       }
     })
   }
@@ -68,7 +107,7 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
   }
 
   function handleGenerateSalaries() {
-    const now = new Date()
+    const now = nowCR()
     const day = now.getDate()
     const half = day <= 15 ? '1ra' : '2da'
     const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic']
@@ -86,7 +125,7 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
   }
 
   function getNextPayrollDate() {
-    const now = new Date()
+    const now = nowCR()
     const day = now.getDate()
     const month = now.getMonth()
     const year = now.getFullYear()
@@ -116,7 +155,7 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
     const url = URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
-    link.download = `${type}-${new Date().toISOString().split('T')[0]}.csv`
+    link.download = `${type}-${todayCR()}.csv`
     link.click()
     URL.revokeObjectURL(url)
   }
@@ -186,33 +225,79 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
               </Button>
             )}
           </div>
-          {unpaidCommissions.length === 0 ? (
+          {groupedCommissions.length === 0 ? (
             <div className="p-6 text-center text-sm text-muted-foreground">
               No hay comisiones pendientes.
             </div>
           ) : (
             <div className="divide-y divide-border">
-              {unpaidCommissions.map((c) => (
-                <div key={c.id} className="flex items-center justify-between p-4 text-sm">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="font-medium">{c.team_member?.full_name ?? 'Desconocido'}</span>
-                    <span className="text-xs text-muted-foreground">
-                      {c.role === 'setter' ? 'Setter' : 'Closer'} — {c.payment?.set?.prospect_name ?? 'N/A'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <span className="font-semibold">{formatUSD(Number(c.amount))}</span>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="gap-1"
-                      disabled={isPending}
-                      onClick={() => handleMarkCommissionPaid(c.id)}
-                    >
-                      {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
-                      Pagar
-                    </Button>
-                  </div>
+              {groupedCommissions.map((group) => (
+                <div key={group.memberId}>
+                  <button
+                    type="button"
+                    className="flex items-center justify-between w-full p-4 text-sm hover:bg-surface-2 transition-colors"
+                    onClick={() => toggleMember(group.memberId)}
+                  >
+                    <div className="flex items-center gap-2">
+                      {expandedMembers[group.memberId] ? (
+                        <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
+                      ) : (
+                        <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
+                      )}
+                      <span className="font-medium">{group.memberName}</span>
+                      <span className="text-xs text-muted-foreground">
+                        {group.commissions.length} comisión{group.commissions.length !== 1 ? 'es' : ''}
+                      </span>
+                    </div>
+                    <span className="font-semibold">{formatUSD(group.total)}</span>
+                  </button>
+
+                  {expandedMembers[group.memberId] && (
+                    <div className="bg-surface-2/50 border-t border-border">
+                      {group.commissions.map((c) => (
+                        <div key={c.id} className="flex items-center justify-between px-4 pl-12 py-3 text-sm border-b border-border last:border-b-0">
+                          <div className="flex flex-col gap-0.5">
+                            <div className="flex items-center gap-2">
+                              <StatusChip
+                                label={c.role === 'setter' ? 'Setter' : 'Closer'}
+                                colorClass={c.role === 'setter' ? 'bg-info/15 text-info' : 'bg-primary/15 text-primary'}
+                              />
+                              <span className="text-muted-foreground">{c.payment?.set?.prospect_name ?? 'N/A'}</span>
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-medium">{formatUSD(Number(c.amount))}</span>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 h-7"
+                              disabled={isPending}
+                              onClick={(e) => { e.stopPropagation(); handleMarkCommissionPaid(c.id) }}
+                            >
+                              {isPending ? <Loader2 className="h-3 w-3 animate-spin" /> : <Check className="h-3 w-3" />}
+                              Pagar
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                      <div className="px-4 pl-12 py-3">
+                        <Button
+                          size="sm"
+                          variant="default"
+                          className="gap-1 text-xs"
+                          disabled={isPending || payingAllMember === group.memberName}
+                          onClick={() => handlePayAllForMember(group.commissions)}
+                        >
+                          {(isPending && payingAllMember === group.memberName) ? (
+                            <Loader2 className="h-3 w-3 animate-spin" />
+                          ) : (
+                            <Check className="h-3 w-3" />
+                          )}
+                          Pagar todas ({formatUSD(group.total)})
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ))}
             </div>

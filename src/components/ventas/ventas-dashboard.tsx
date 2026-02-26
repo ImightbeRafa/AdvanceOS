@@ -6,7 +6,8 @@ import type { Set, Profile, Deal, UserRole } from '@/types'
 import { DataTable, type Column } from '@/components/shared/data-table'
 import { StatusChip } from '@/components/shared/status-chip'
 import { SET_STATUS_LABELS, SET_STATUS_COLORS, SERVICE_LABELS } from '@/lib/constants'
-import { formatDateTime, formatShortDate, isDateToday, isDatePast } from '@/lib/utils/dates'
+import { formatDateTime, formatShortDate, isDateToday, isDatePast, nowCR, monthStartCR, toCR, CR_TZ } from '@/lib/utils/dates'
+import { TZDate } from '@date-fns/tz'
 import { formatUSD } from '@/lib/utils/currency'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -91,11 +92,7 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, userRol
   }
 
   // --- KPI calculations (current month, using scheduled_at for sets-based metrics) ---
-  const now = useMemo(() => new Date(), [])
-  const monthStart = useMemo(() => {
-    const d = new Date(now.getFullYear(), now.getMonth(), 1)
-    return d.toISOString().split('T')[0]
-  }, [now])
+  const monthStart = useMemo(() => monthStartCR(), [])
 
   const setsAgendadosMTD = useMemo(() =>
     sets.filter((s) => s.scheduled_at.split('T')[0] >= monthStart),
@@ -166,12 +163,12 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, userRol
     if (setterFilter !== 'all') result = result.filter((s) => s.setter_id === setterFilter)
     if (serviceFilter !== 'all') result = result.filter((s) => s.service_offered === serviceFilter)
     if (dateFrom) {
-      const from = new Date(dateFrom); from.setHours(0, 0, 0, 0)
-      result = result.filter((s) => new Date(s.scheduled_at) >= from)
+      const from = new TZDate(`${dateFrom}T00:00:00`, CR_TZ)
+      result = result.filter((s) => toCR(s.scheduled_at) >= from)
     }
     if (dateTo) {
-      const to = new Date(dateTo); to.setHours(23, 59, 59, 999)
-      result = result.filter((s) => new Date(s.scheduled_at) <= to)
+      const to = new TZDate(`${dateTo}T23:59:59.999`, CR_TZ)
+      result = result.filter((s) => toCR(s.scheduled_at) <= to)
     }
     return result
   }, [sets, statusFilter, closerFilter, setterFilter, serviceFilter, dateFrom, dateTo])
@@ -201,13 +198,13 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, userRol
   )
 
   const pendingCallsNext7 = useMemo(() => {
-    const today = new Date()
-    const next7 = new Date(today)
+    const todayCR = nowCR()
+    const next7 = new TZDate(todayCR, CR_TZ)
     next7.setDate(next7.getDate() + 7)
     return sets.filter((s) => {
       if (!['agendado', 'precall_enviado'].includes(s.status)) return false
-      const d = new Date(s.scheduled_at)
-      return d > today && d <= next7
+      const d = toCR(s.scheduled_at)
+      return d > todayCR && d <= next7
     })
   }, [sets])
 

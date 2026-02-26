@@ -2,6 +2,7 @@ import { createClient, getAuthProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AccountingDashboard } from '@/components/contabilidad/accounting-dashboard'
 import { getAccountingSummary, getExpenses, getUnpaidCommissions, getManualTransactions } from '@/lib/actions/accounting'
+import { todayCR, monthStartCR } from '@/lib/utils/dates'
 
 export const dynamic = 'force-dynamic'
 
@@ -11,9 +12,8 @@ export default async function ContabilidadPage() {
   if (profile.role !== 'admin') redirect('/')
 
   const supabase = await createClient()
-  const now = new Date()
-  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
-  const today = now.toISOString().split('T')[0]
+  const monthStart = monthStartCR()
+  const today = todayCR()
 
   const [summary, expenses, unpaidCommissions, manualTransactions, { data: exchangeRate }] = await Promise.all([
     getAccountingSummary(monthStart, today),

@@ -2,7 +2,7 @@
 
 import type { Advance90Phase } from '@/types'
 import { StatusChip } from '@/components/shared/status-chip'
-import { formatShortDate } from '@/lib/utils/dates'
+import { formatShortDate, todayCR } from '@/lib/utils/dates'
 import { cn } from '@/lib/utils'
 
 interface Advance90TimelineProps {
@@ -17,7 +17,7 @@ const PHASE_COLORS: Record<string, string> = {
 }
 
 function computePhaseStatus(phase: Advance90Phase): 'pendiente' | 'en_progreso' | 'completado' {
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayCR()
   if (today < phase.start_date) return 'pendiente'
   if (today > phase.end_date) return 'completado'
   return 'en_progreso'

@@ -3,7 +3,7 @@
 import type { Profile, Set } from '@/types'
 import { StatusChip } from '@/components/shared/status-chip'
 import { SET_STATUS_LABELS, SET_STATUS_COLORS } from '@/lib/constants'
-import { formatDateTime, isDateToday } from '@/lib/utils/dates'
+import { formatDateTime, isDateToday, nowCR, toCR } from '@/lib/utils/dates'
 import { formatUSD } from '@/lib/utils/currency'
 import { Phone, Clock, AlertTriangle, DollarSign, Percent } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -27,11 +27,11 @@ export function CloserDashboard({ profile, sets, commissionsTotal }: CloserDashb
 
   const pendingPayments = mySets.filter((s) => s.status === 'closed_pendiente')
 
-  const now = new Date()
+  const now = nowCR()
   const myDealsThisMonth = mySets.filter((s) => {
     const deal = Array.isArray(s.deal) ? s.deal[0] : s.deal
     if (!deal) return false
-    const d = new Date(deal.created_at)
+    const d = toCR(deal.created_at)
     return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear()
   })
   const closedThisMonth = myDealsThisMonth.filter((s) => {

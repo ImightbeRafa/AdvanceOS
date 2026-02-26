@@ -13,6 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { toast } from 'sonner'
+import { todayCR } from '@/lib/utils/dates'
 
 interface ManualTransactionModalProps {
   open: boolean
@@ -26,7 +27,7 @@ export function ManualTransactionModal({ open, onOpenChange }: ManualTransaction
   const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<ManualTransactionFormData>({
     resolver: zodResolver(manualTransactionSchema),
     defaultValues: {
-      date: new Date().toISOString().split('T')[0],
+      date: todayCR(),
       type: 'ingreso',
     },
   })
@@ -36,7 +37,7 @@ export function ManualTransactionModal({ open, onOpenChange }: ManualTransaction
     try {
       await createManualTransaction(data)
       toast.success(data.type === 'ingreso' ? 'Ingreso registrado' : 'Egreso registrado')
-      reset({ date: new Date().toISOString().split('T')[0], type: 'ingreso' })
+      reset({ date: todayCR(), type: 'ingreso' })
       onOpenChange(false)
       router.refresh()
     } catch {

@@ -6,6 +6,7 @@ import { CLIENT_STATUS_LABELS, CLIENT_STATUS_COLORS } from '@/lib/constants'
 import { Users, Layers } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
+import { todayCR } from '@/lib/utils/dates'
 
 interface PhaseInfo {
   client_id: string
@@ -23,7 +24,7 @@ interface DeliveryDashboardProps {
 
 function getCurrentPhase(clientPhases: PhaseInfo[]): string | null {
   if (clientPhases.length === 0) return null
-  const today = new Date().toISOString().split('T')[0]
+  const today = todayCR()
   const active = clientPhases.find((p) => p.start_date <= today && p.end_date >= today)
   if (active) return active.phase_name
   const future = clientPhases.find((p) => p.start_date > today)
