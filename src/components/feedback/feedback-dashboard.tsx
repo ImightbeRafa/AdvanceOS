@@ -1,9 +1,9 @@
 'use client'
 
 import { useState, useMemo } from 'react'
+import dynamic from 'next/dynamic'
 import { DataTable, type Column } from '@/components/shared/data-table'
 import { StatusChip } from '@/components/shared/status-chip'
-import { TicketDetailDrawer } from './ticket-detail-drawer'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { format } from 'date-fns'
 import { es } from 'date-fns/locale'
@@ -17,6 +17,10 @@ import {
   FEEDBACK_PRIORITY_COLORS,
 } from '@/lib/constants'
 import type { FeedbackTicket, FeedbackCategory, FeedbackPriority, FeedbackStatus, Profile } from '@/types'
+
+const TicketDetailDrawer = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void; ticket: FeedbackTicket | null; teamMembers: Pick<Profile, 'id' | 'full_name' | 'role'>[] }>(
+  () => import('./ticket-detail-drawer').then(m => ({ default: m.TicketDetailDrawer }))
+)
 
 interface FeedbackDashboardProps {
   tickets: FeedbackTicket[]

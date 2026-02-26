@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthProfile } from '@/lib/supabase/server'
 import { redirect, notFound } from 'next/navigation'
 import { ClientProfile } from '@/components/clientes/client-profile'
 
@@ -6,19 +6,11 @@ export const dynamic = 'force-dynamic'
 
 export default async function ClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
+  const { user, profile } = await getAuthProfile()
+  if (!user || !profile) redirect('/login')
+  if (!['admin', 'closer', 'delivery'].includes(profile.role)) redirect('/')
+
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
-
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !['admin', 'closer', 'delivery'].includes(profile.role)) {
-    redirect('/')
-  }
 
   const { data: client } = await supabase
     .from('clients')
@@ -33,49 +25,28 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
 
   if (!client) notFound()
 
-  const { data: onboarding } = await supabase
-    .from('onboarding_checklist')
-    .select('*')
-    .eq('client_id', id)
-    .order('item_key')
-
-  const { data: phases } = await supabase
-    .from('advance90_phases')
-    .select('*')
-    .eq('client_id', id)
-    .order('order')
-
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('*, commissions(*, team_member:profiles!commissions_team_member_id_fkey(id, full_name))')
-    .eq('client_id', id)
-    .order('payment_date', { ascending: false })
-
-  const { data: assets } = await supabase
-    .from('client_assets')
-    .select('*')
-    .eq('client_id', id)
-    .order('created_at', { ascending: false })
-
-  const { data: activityLog } = await supabase
-    .from('activity_log')
-    .select('*, user:profiles!activity_log_user_id_fkey(id, full_name)')
-    .eq('entity_id', id)
-    .order('created_at', { ascending: false })
-    .limit(30)
-
-  const { data: teamMembers } = await supabase
-    .from('profiles')
-    .select('id, full_name, role')
-    .eq('active', true)
-
-  const { data: clientForm } = await supabase
-    .from('client_forms')
-    .select('*')
-    .eq('client_id', id)
-    .order('created_at', { ascending: false })
-    .limit(1)
-    .maybeSingle()
+  const [
+    { data: onboarding },
+    { data: phases },
+    { data: payments },
+    { data: assets },
+    { data: activityLog },
+    { data: teamMembers },
+    { data: clientForm },
+  ] = await Promise.all([
+    supabase.from('onboarding_checklist').select('*').eq('client_id', id).order('item_key'),
+    supabase.from('advance90_phases').select('*').eq('client_id', id).order('order'),
+    supabase.from('payments')
+      .select('*, commissions(*, team_member:profiles!commissions_team_member_id_fkey(id, full_name))')
+      .eq('client_id', id).order('payment_date', { ascending: false }),
+    supabase.from('client_assets').select('*').eq('client_id', id).order('created_at', { ascending: false }),
+    supabase.from('activity_log')
+      .select('*, user:profiles!activity_log_user_id_fkey(id, full_name)')
+      .eq('entity_id', id).order('created_at', { ascending: false }).limit(30),
+    supabase.from('profiles').select('id, full_name, role').eq('active', true),
+    supabase.from('client_forms').select('*').eq('client_id', id)
+      .order('created_at', { ascending: false }).limit(1).maybeSingle(),
+  ])
 
   return (
     <ClientProfile

@@ -1,35 +1,32 @@
-import { createClient } from '@/lib/supabase/server'
+import { createClient, getAuthProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { ClientesList } from '@/components/clientes/clientes-list'
 
 export const dynamic = 'force-dynamic'
 
 export default async function ClientesPage() {
+  const { user, profile } = await getAuthProfile()
+  if (!user || !profile) redirect('/login')
+  if (!['admin', 'closer', 'delivery'].includes(profile.role)) redirect('/')
+
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile || !['admin', 'closer', 'delivery'].includes(profile.role)) {
-    redirect('/')
-  }
-
-  const { data: clients } = await supabase
-    .from('clients')
-    .select(`
-      *,
-      assigned_member:profiles!clients_assigned_to_fkey(id, full_name)
-    `)
-    .order('created_at', { ascending: false })
-
-  const { data: payments } = await supabase
-    .from('payments')
-    .select('client_id, amount_gross')
+  const [{ data: clients }, { data: payments }, { data: deals }, { data: phases }] = await Promise.all([
+    supabase
+      .from('clients')
+      .select('*, assigned_member:profiles!clients_assigned_to_fkey(id, full_name)')
+      .order('created_at', { ascending: false }),
+    supabase
+      .from('payments')
+      .select('client_id, amount_gross'),
+    supabase
+      .from('deals')
+      .select('id, revenue_total'),
+    supabase
+      .from('advance90_phases')
+      .select('client_id, phase_name, start_date, end_date, order')
+      .order('order'),
+  ])
 
   const paymentsByClient = (payments ?? []).reduce<Record<string, number>>((acc, p) => {
     if (p.client_id) {
@@ -38,19 +35,10 @@ export default async function ClientesPage() {
     return acc
   }, {})
 
-  const { data: deals } = await supabase
-    .from('deals')
-    .select('id, revenue_total')
-
   const revenueByDeal = (deals ?? []).reduce<Record<string, number>>((acc, d) => {
     acc[d.id] = Number(d.revenue_total ?? 0)
     return acc
   }, {})
-
-  const { data: phases } = await supabase
-    .from('advance90_phases')
-    .select('client_id, phase_name, start_date, end_date, order')
-    .order('order')
 
   const phasesByClient = (phases ?? []).reduce<Record<string, { phase_name: string; start_date: string; end_date: string; order: number }[]>>((acc, p) => {
     if (!acc[p.client_id]) acc[p.client_id] = []

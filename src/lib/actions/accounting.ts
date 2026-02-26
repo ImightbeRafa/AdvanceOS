@@ -7,50 +7,56 @@ import type { ExpenseFormData, AdSpendFormData } from '@/lib/schemas'
 export async function getAccountingSummary(periodStart?: string, periodEnd?: string) {
   const supabase = await createClient()
 
-  let paymentsQuery = supabase.from('payments').select('amount_gross, amount_net, fee_amount, payment_date')
-  if (periodStart) paymentsQuery = paymentsQuery.gte('payment_date', periodStart)
-  if (periodEnd) paymentsQuery = paymentsQuery.lte('payment_date', periodEnd)
-  const { data: payments } = await paymentsQuery
+  let paymentsQ = supabase.from('payments').select('amount_gross, amount_net, fee_amount, payment_date')
+  if (periodStart) paymentsQ = paymentsQ.gte('payment_date', periodStart)
+  if (periodEnd) paymentsQ = paymentsQ.lte('payment_date', periodEnd)
 
-  let expensesQuery = supabase.from('expenses').select('amount_usd, date')
-  if (periodStart) expensesQuery = expensesQuery.gte('date', periodStart)
-  if (periodEnd) expensesQuery = expensesQuery.lte('date', periodEnd)
-  const { data: expenses } = await expensesQuery
+  let expensesQ = supabase.from('expenses').select('amount_usd, date')
+  if (periodStart) expensesQ = expensesQ.gte('date', periodStart)
+  if (periodEnd) expensesQ = expensesQ.lte('date', periodEnd)
 
-  let commissionsQuery = supabase.from('commissions').select('amount, is_paid, created_at')
-  if (periodStart) commissionsQuery = commissionsQuery.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) commissionsQuery = commissionsQuery.lte('created_at', `${periodEnd}T23:59:59`)
-  const { data: commissions } = await commissionsQuery
+  let commissionsQ = supabase.from('commissions').select('amount, is_paid, created_at')
+  if (periodStart) commissionsQ = commissionsQ.gte('created_at', `${periodStart}T00:00:00`)
+  if (periodEnd) commissionsQ = commissionsQ.lte('created_at', `${periodEnd}T23:59:59`)
 
-  let salariesQuery = supabase.from('salary_payments').select('amount, status, created_at')
-  if (periodStart) salariesQuery = salariesQuery.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) salariesQuery = salariesQuery.lte('created_at', `${periodEnd}T23:59:59`)
-  const { data: salaryPayments } = await salariesQuery
+  let salariesQ = supabase.from('salary_payments').select('amount, status, created_at')
+  if (periodStart) salariesQ = salariesQ.gte('created_at', `${periodStart}T00:00:00`)
+  if (periodEnd) salariesQ = salariesQ.lte('created_at', `${periodEnd}T23:59:59`)
 
-  let adSpendQuery = supabase.from('ad_spend').select('amount_usd, period_start')
-  if (periodStart) adSpendQuery = adSpendQuery.gte('period_start', periodStart)
-  if (periodEnd) adSpendQuery = adSpendQuery.lte('period_start', periodEnd)
-  const { data: adSpends } = await adSpendQuery
+  let adSpendQ = supabase.from('ad_spend').select('amount_usd, period_start')
+  if (periodStart) adSpendQ = adSpendQ.gte('period_start', periodStart)
+  if (periodEnd) adSpendQ = adSpendQ.lte('period_start', periodEnd)
 
-  let closedDealsQuery = supabase.from('deals').select('revenue_total, outcome, created_at').eq('outcome', 'closed')
-  if (periodStart) closedDealsQuery = closedDealsQuery.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) closedDealsQuery = closedDealsQuery.lte('created_at', `${periodEnd}T23:59:59`)
-  const { data: closedDeals } = await closedDealsQuery
+  let closedDealsQ = supabase.from('deals').select('revenue_total, outcome, created_at').eq('outcome', 'closed')
+  if (periodStart) closedDealsQ = closedDealsQ.gte('created_at', `${periodStart}T00:00:00`)
+  if (periodEnd) closedDealsQ = closedDealsQ.lte('created_at', `${periodEnd}T23:59:59`)
 
-  let allDealsQuery = supabase.from('deals').select('id, created_at')
-  if (periodStart) allDealsQuery = allDealsQuery.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) allDealsQuery = allDealsQuery.lte('created_at', `${periodEnd}T23:59:59`)
-  const { data: allDeals } = await allDealsQuery
+  let allDealsQ = supabase.from('deals').select('id, created_at')
+  if (periodStart) allDealsQ = allDealsQ.gte('created_at', `${periodStart}T00:00:00`)
+  if (periodEnd) allDealsQ = allDealsQ.lte('created_at', `${periodEnd}T23:59:59`)
 
-  let setsQuery = supabase.from('sets').select('*', { count: 'exact', head: true })
-  if (periodStart) setsQuery = setsQuery.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) setsQuery = setsQuery.lte('created_at', `${periodEnd}T23:59:59`)
-  const { count: setsTotal } = await setsQuery
+  let setsQ = supabase.from('sets').select('*', { count: 'exact', head: true })
+  if (periodStart) setsQ = setsQ.gte('created_at', `${periodStart}T00:00:00`)
+  if (periodEnd) setsQ = setsQ.lte('created_at', `${periodEnd}T23:59:59`)
 
-  let clientsQuery = supabase.from('clients').select('*', { count: 'exact', head: true })
-  if (periodStart) clientsQuery = clientsQuery.gte('created_at', `${periodStart}T00:00:00`)
-  if (periodEnd) clientsQuery = clientsQuery.lte('created_at', `${periodEnd}T23:59:59`)
-  const { count: clientsTotal } = await clientsQuery
+  let clientsQ = supabase.from('clients').select('*', { count: 'exact', head: true })
+  if (periodStart) clientsQ = clientsQ.gte('created_at', `${periodStart}T00:00:00`)
+  if (periodEnd) clientsQ = clientsQ.lte('created_at', `${periodEnd}T23:59:59`)
+
+  const [
+    { data: payments },
+    { data: expenses },
+    { data: commissions },
+    { data: salaryPayments },
+    { data: adSpends },
+    { data: closedDeals },
+    { data: allDeals },
+    { count: setsTotal },
+    { count: clientsTotal },
+  ] = await Promise.all([
+    paymentsQ, expensesQ, commissionsQ, salariesQ, adSpendQ,
+    closedDealsQ, allDealsQ, setsQ, clientsQ,
+  ])
 
   const closedDealsCount = (closedDeals ?? []).length
   const revenue = (closedDeals ?? []).reduce((sum, d) => sum + Number(d.revenue_total ?? 0), 0)
@@ -63,7 +69,7 @@ export async function getAccountingSummary(periodStart?: string, periodEnd?: str
   const totalSalaries = (salaryPayments ?? []).reduce((sum, s) => sum + Number(s.amount), 0)
   const totalAdSpend = (adSpends ?? []).reduce((sum, a) => sum + Number(a.amount_usd), 0)
 
-  const margin = cashNet - totalExpenses - totalSalaries - totalCommissions
+  const margin = cashNet - totalExpenses - totalSalaries - totalCommissions - totalAdSpend
   const totalSets = setsTotal ?? 0
   const totalClients = clientsTotal ?? 0
   const totalDeals = (allDeals ?? []).length

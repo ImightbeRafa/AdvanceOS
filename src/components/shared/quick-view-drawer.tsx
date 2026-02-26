@@ -31,7 +31,7 @@ export function QuickViewDrawer({
           <SheetTitle>{title}</SheetTitle>
           {description && <SheetDescription>{description}</SheetDescription>}
         </SheetHeader>
-        <ScrollArea className="h-[calc(100vh-8rem)] pr-4 mt-4">
+        <ScrollArea className="h-[calc(100vh-8rem)] px-4 mt-4">
           {children}
         </ScrollArea>
       </SheetContent>

@@ -12,6 +12,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { markNotificationRead, markAllNotificationsRead } from '@/lib/actions/notifications'
+import { useNotifications } from '@/lib/hooks/use-notifications'
 import { Button } from '@/components/ui/button'
 import { Avatar, AvatarFallback } from '@/components/ui/avatar'
 import {
@@ -29,14 +30,13 @@ import type { Profile, Notification } from '@/types'
 interface TopBarProps {
   profile: Profile
   collapsed: boolean
-  notificationCount: number
-  notifications: Notification[]
 }
 
-export function TopBar({ profile, collapsed, notificationCount, notifications }: TopBarProps) {
+export function TopBar({ profile, collapsed }: TopBarProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const supabase = createClient()
+  const { notifications, unreadCount: notificationCount, invalidate } = useNotifications()
 
   async function handleLogout() {
     await supabase.auth.signOut()
@@ -47,7 +47,7 @@ export function TopBar({ profile, collapsed, notificationCount, notifications }:
   function handleMarkAllRead() {
     startTransition(async () => {
       await markAllNotificationsRead()
-      router.refresh()
+      invalidate()
     })
   }
 
@@ -56,10 +56,10 @@ export function TopBar({ profile, collapsed, notificationCount, notifications }:
       if (!n.read) {
         await markNotificationRead(n.id)
       }
+      invalidate()
       if (n.action_url) {
         router.push(n.action_url)
       }
-      router.refresh()
     })
   }
 

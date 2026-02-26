@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import type { Profile } from '@/types'
+import type { Profile, UserRole } from '@/types'
 import { DataTable, type Column } from '@/components/shared/data-table'
 import { StatusChip } from '@/components/shared/status-chip'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/constants'
@@ -14,8 +14,14 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
-import { TeamMemberDrawer } from './team-member-drawer'
-import { EditTeamMemberModal } from './edit-team-member-modal'
+import dynamic from 'next/dynamic'
+
+const TeamMemberDrawer = dynamic<{ member: Profile | null; open: boolean; onOpenChange: (open: boolean) => void; userRole?: UserRole }>(
+  () => import('./team-member-drawer').then(m => ({ default: m.TeamMemberDrawer }))
+)
+const EditTeamMemberModal = dynamic<{ member: Profile | null; open: boolean; onOpenChange: (open: boolean) => void }>(
+  () => import('./edit-team-member-modal').then(m => ({ default: m.EditTeamMemberModal }))
+)
 
 interface TeamListProps {
   members: Profile[]

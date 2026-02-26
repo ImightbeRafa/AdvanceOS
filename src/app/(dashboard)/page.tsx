@@ -1,4 +1,5 @@
 import { createClient } from '@/lib/supabase/server'
+import { getAuthProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getAccountingSummary } from '@/lib/actions/accounting'
 
@@ -10,29 +11,23 @@ import { AdminDashboard } from '@/components/dashboards/admin-dashboard'
 import { DeliveryDashboard } from '@/components/dashboards/delivery-dashboard'
 
 export default async function HomePage() {
+  const { user, profile } = await getAuthProfile()
+  if (!user || !profile) redirect('/login')
+
   const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('id', user.id)
-    .single()
-
-  if (!profile) redirect('/login')
-
-  const { data: sets } = await supabase
-    .from('sets')
-    .select('*, setter:profiles!sets_setter_id_fkey(id, full_name), closer:profiles!sets_closer_id_fkey(id, full_name), deal:deals(*)')
-    .order('scheduled_at', { ascending: true })
-    .limit(200)
-
-  const { data: unpaidCommissions } = await supabase
-    .from('commissions')
-    .select('amount')
-    .eq('team_member_id', user.id)
-    .eq('is_paid', false)
+  const [{ data: sets }, { data: unpaidCommissions }] = await Promise.all([
+    supabase
+      .from('sets')
+      .select('*, setter:profiles!sets_setter_id_fkey(id, full_name), closer:profiles!sets_closer_id_fkey(id, full_name), deal:deals(*)')
+      .order('scheduled_at', { ascending: true })
+      .limit(200),
+    supabase
+      .from('commissions')
+      .select('amount')
+      .eq('team_member_id', user.id)
+      .eq('is_paid', false),
+  ])
 
   const myCommissionsTotal = (unpaidCommissions ?? []).reduce((s, c) => s + Number(c.amount), 0)
 
@@ -45,11 +40,12 @@ export default async function HomePage() {
       const now = new Date()
       const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
       const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
-      const accountingSummary = await getAccountingSummary(monthStart, monthEnd)
-
-      const { data: payments } = await supabase
-        .from('payments')
-        .select('set_id, amount_gross')
+      const [accountingSummary, { data: payments }] = await Promise.all([
+        getAccountingSummary(monthStart, monthEnd),
+        supabase
+          .from('payments')
+          .select('set_id, amount_gross'),
+      ])
 
       const paymentsBySet = (payments ?? []).reduce<Record<string, number>>((acc, p) => {
         acc[p.set_id] = (acc[p.set_id] ?? 0) + Number(p.amount_gross)

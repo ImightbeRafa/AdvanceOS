@@ -17,9 +17,15 @@ import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
 import { updateSetStatus } from '@/lib/actions/sets'
 import { toast } from 'sonner'
-import { DealModal } from './deal-modal'
-import { PaymentModal } from './payment-modal'
+import dynamic from 'next/dynamic'
 import { ExternalLink, MessageCircle } from 'lucide-react'
+
+const DealModal = dynamic<{ set: Set; open: boolean; onOpenChange: (open: boolean) => void }>(
+  () => import('./deal-modal').then(m => ({ default: m.DealModal }))
+)
+const PaymentModal = dynamic<{ set: Set; clientId: string | null; open: boolean; onOpenChange: (open: boolean) => void }>(
+  () => import('./payment-modal').then(m => ({ default: m.PaymentModal }))
+)
 
 interface SetDetailDrawerProps {
   set: Set | null

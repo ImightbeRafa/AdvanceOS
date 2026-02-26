@@ -11,8 +11,14 @@ import { Button } from '@/components/ui/button'
 import { markCommissionPaid, getAccountingSummary } from '@/lib/actions/accounting'
 import { toast } from 'sonner'
 import { TrendingUp, DollarSign, Receipt, Users, Target, Minus, Percent } from 'lucide-react'
-import { ExpenseModal } from './expense-modal'
-import { AdSpendModal } from './adspend-modal'
+import dynamic from 'next/dynamic'
+
+const ExpenseModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void }>(
+  () => import('./expense-modal').then(m => ({ default: m.ExpenseModal }))
+)
+const AdSpendModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void }>(
+  () => import('./adspend-modal').then(m => ({ default: m.AdSpendModal }))
+)
 import type { Expense, Commission } from '@/types'
 
 type PeriodKey = 'hoy' | '7d' | '30d' | 'mtd'

@@ -20,8 +20,6 @@ import { NAV_ITEMS } from '@/lib/constants'
 import type { UserRole } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
-import { useState } from 'react'
-
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
   Target,
@@ -35,11 +33,12 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
 
 interface SidebarProps {
   role: UserRole
+  collapsed: boolean
+  onToggle: () => void
 }
 
-export function Sidebar({ role }: SidebarProps) {
+export function Sidebar({ role, collapsed, onToggle }: SidebarProps) {
   const pathname = usePathname()
-  const [collapsed, setCollapsed] = useState(false)
 
   const filteredItems = NAV_ITEMS.filter((item) =>
     item.roles.includes(role)
@@ -110,7 +109,7 @@ export function Sidebar({ role }: SidebarProps) {
           variant="ghost"
           size="sm"
           className="w-full justify-center text-sidebar-foreground/50 hover:text-sidebar-foreground"
-          onClick={() => setCollapsed(!collapsed)}
+          onClick={onToggle}
         >
           {collapsed ? (
             <ChevronRight className="h-4 w-4" />

@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase/server'
+import { getAuthProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { getUnpaidCommissions, getSalaryPayments } from '@/lib/actions/accounting'
 import { PlanillaDashboard } from '@/components/equipo/planilla-dashboard'
@@ -6,20 +6,14 @@ import { PlanillaDashboard } from '@/components/equipo/planilla-dashboard'
 export const dynamic = 'force-dynamic'
 
 export default async function PlanillaPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+  const { user, profile } = await getAuthProfile()
+  if (!user || !profile) redirect('/login')
+  if (profile.role !== 'admin') redirect('/')
 
-  const { data: profile } = await supabase
-    .from('profiles')
-    .select('role')
-    .eq('id', user.id)
-    .single()
-
-  if (profile?.role !== 'admin') redirect('/')
-
-  const unpaidCommissions = await getUnpaidCommissions()
-  const salaryPayments = await getSalaryPayments()
+  const [unpaidCommissions, salaryPayments] = await Promise.all([
+    getUnpaidCommissions(),
+    getSalaryPayments(),
+  ])
 
   return (
     <div className="space-y-6">

@@ -26,9 +26,17 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from '@/components/ui/dropdown-menu'
-import { CreateSetModal } from './create-set-modal'
-import { SetDetailDrawer } from './set-detail-drawer'
-import { PaymentModal } from './payment-modal'
+import dynamic from 'next/dynamic'
+
+const CreateSetModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[] }>(
+  () => import('./create-set-modal').then(m => ({ default: m.CreateSetModal }))
+)
+const SetDetailDrawer = dynamic<{ set: Set | null; open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[] }>(
+  () => import('./set-detail-drawer').then(m => ({ default: m.SetDetailDrawer }))
+)
+const PaymentModal = dynamic<{ set: Set; clientId: string | null; open: boolean; onOpenChange: (open: boolean) => void }>(
+  () => import('./payment-modal').then(m => ({ default: m.PaymentModal }))
+)
 import { useSavedFilters } from '@/lib/hooks/use-saved-filters'
 
 interface VentasDashboardProps {
