@@ -107,6 +107,15 @@ export const feedbackReplySchema = z.object({
   is_internal: z.boolean(),
 })
 
+export const manualTransactionSchema = z.object({
+  type: z.enum(['ingreso', 'egreso'], { message: 'Seleccioná el tipo' }),
+  description: z.string().min(1, 'La descripción es requerida'),
+  amount_usd: z.number().positive('El monto debe ser mayor a 0'),
+  date: z.string().min(1, 'La fecha es requerida'),
+  notes: z.string().optional(),
+})
+
+export type ManualTransactionFormData = z.infer<typeof manualTransactionSchema>
 export type ProfileEditFormData = z.infer<typeof profileEditSchema>
 export type PasswordChangeFormData = z.infer<typeof passwordChangeSchema>
 export type LoginFormData = z.infer<typeof loginSchema>

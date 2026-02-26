@@ -8,9 +8,9 @@ import { useCurrencyStore } from '@/lib/hooks/use-currency'
 import { CurrencyToggle } from '@/components/shared/currency-toggle'
 import { StatusChip } from '@/components/shared/status-chip'
 import { Button } from '@/components/ui/button'
-import { markCommissionPaid, getAccountingSummary } from '@/lib/actions/accounting'
+import { markCommissionPaid, getAccountingSummary, deleteManualTransaction } from '@/lib/actions/accounting'
 import { toast } from 'sonner'
-import { TrendingUp, DollarSign, Receipt, Users, Target, Minus, Percent } from 'lucide-react'
+import { TrendingUp, DollarSign, Receipt, Users, Target, Minus, ArrowUpDown, Trash2 } from 'lucide-react'
 import dynamic from 'next/dynamic'
 
 const ExpenseModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void }>(
@@ -19,7 +19,10 @@ const ExpenseModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => v
 const AdSpendModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void }>(
   () => import('./adspend-modal').then(m => ({ default: m.AdSpendModal }))
 )
-import type { Expense, Commission } from '@/types'
+const ManualTransactionModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void }>(
+  () => import('./manual-transaction-modal').then(m => ({ default: m.ManualTransactionModal }))
+)
+import type { Expense, Commission, ManualTransaction } from '@/types'
 
 type PeriodKey = 'hoy' | '7d' | '30d' | 'mtd'
 
@@ -33,6 +36,8 @@ interface AccountingSummary {
   unpaidCommissions: number
   totalSalaries: number
   totalAdSpend: number
+  manualIncome: number
+  manualDeductions: number
   margin: number
   totalSets: number
   totalClients: number
@@ -47,6 +52,7 @@ interface AccountingSummary {
 interface AccountingDashboardProps {
   summary: AccountingSummary
   expenses: Expense[]
+  manualTransactions: ManualTransaction[]
   unpaidCommissions: (Commission & { team_member?: { full_name: string }; payment?: { set?: { prospect_name: string } } })[]
   exchangeRate: number
   initialPeriod: PeriodKey
@@ -81,12 +87,14 @@ const PERIOD_LABELS: Record<PeriodKey, string> = {
   mtd: 'MTD',
 }
 
-export function AccountingDashboard({ summary: initialSummary, expenses, unpaidCommissions, exchangeRate, initialPeriod }: AccountingDashboardProps) {
+export function AccountingDashboard({ summary: initialSummary, expenses, manualTransactions, unpaidCommissions, exchangeRate, initialPeriod }: AccountingDashboardProps) {
   const router = useRouter()
   const { currency } = useCurrencyStore()
   const [showExpenseModal, setShowExpenseModal] = useState(false)
   const [showAdSpendModal, setShowAdSpendModal] = useState(false)
+  const [showManualTxModal, setShowManualTxModal] = useState(false)
   const [payingId, setPayingId] = useState<string | null>(null)
+  const [deletingId, setDeletingId] = useState<string | null>(null)
   const [period, setPeriod] = useState<PeriodKey>(initialPeriod)
   const [summary, setSummary] = useState<AccountingSummary>(initialSummary)
   const [isPending, startTransition] = useTransition()
@@ -117,6 +125,19 @@ export function AccountingDashboard({ summary: initialSummary, expenses, unpaidC
     }
   }
 
+  async function handleDeleteTransaction(id: string) {
+    setDeletingId(id)
+    try {
+      await deleteManualTransaction(id)
+      toast.success('Movimiento eliminado')
+      router.refresh()
+    } catch {
+      toast.error('Error al eliminar movimiento')
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
   return (
     <>
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -134,8 +155,12 @@ export function AccountingDashboard({ summary: initialSummary, expenses, unpaidC
             </Button>
           ))}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <CurrencyToggle />
+          <Button size="sm" onClick={() => setShowManualTxModal(true)}>
+            <ArrowUpDown className="h-3.5 w-3.5 mr-1.5" />
+            Registrar movimiento
+          </Button>
           <Button size="sm" variant="outline" onClick={() => setShowAdSpendModal(true)}>Registrar ad spend</Button>
           <Button size="sm" variant="outline" onClick={() => setShowExpenseModal(true)}>Registrar gasto</Button>
         </div>
@@ -170,9 +195,9 @@ export function AccountingDashboard({ summary: initialSummary, expenses, unpaidC
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2"><Minus className="h-4 w-4 text-destructive" /><span className="text-sm text-muted-foreground">Rebajos (Tilopay cuotas)</span></div>
+          <div className="flex items-center gap-2"><Minus className="h-4 w-4 text-destructive" /><span className="text-sm text-muted-foreground">Rebajos (Tilopay)</span></div>
           <p className="mt-1 text-xl font-bold">{fmt(summary.bankFees)}</p>
         </div>
         <div className="rounded-xl border border-border bg-surface-1 p-4">
@@ -189,6 +214,14 @@ export function AccountingDashboard({ summary: initialSummary, expenses, unpaidC
           {summary.unpaidCommissions > 0 && (
             <p className="text-xs text-warning mt-0.5">Sin pagar: {fmt(summary.unpaidCommissions)}</p>
           )}
+        </div>
+        <div className="rounded-xl border border-border bg-surface-1 p-4">
+          <div className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-success" /><span className="text-sm text-muted-foreground">Ingresos manuales</span></div>
+          <p className="mt-1 text-xl font-bold text-success">{fmt(summary.manualIncome)}</p>
+        </div>
+        <div className="rounded-xl border border-border bg-surface-1 p-4">
+          <div className="flex items-center gap-2"><Minus className="h-4 w-4 text-destructive" /><span className="text-sm text-muted-foreground">Egresos manuales</span></div>
+          <p className="mt-1 text-xl font-bold text-destructive">{fmt(summary.manualDeductions)}</p>
         </div>
       </div>
 
@@ -259,6 +292,38 @@ export function AccountingDashboard({ summary: initialSummary, expenses, unpaidC
       </div>
 
       <div className="rounded-xl border border-border bg-surface-1 p-4">
+        <h3 className="text-sm font-medium mb-3">Movimientos manuales</h3>
+        {manualTransactions.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Sin movimientos manuales registrados.</p>
+        ) : (
+          <div className="space-y-2">
+            {manualTransactions.slice(0, 10).map((t) => (
+              <div key={t.id} className="flex items-center gap-3 text-sm">
+                <StatusChip
+                  label={t.type === 'ingreso' ? 'Ingreso' : 'Egreso'}
+                  colorClass={t.type === 'ingreso' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}
+                />
+                <span className="flex-1">{t.description}</span>
+                <span className={`font-medium ${t.type === 'ingreso' ? 'text-success' : 'text-destructive'}`}>
+                  {t.type === 'ingreso' ? '+' : '-'}{fmt(t.amount_usd)}
+                </span>
+                <span className="text-xs text-muted-foreground">{formatDate(t.date)}</span>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive"
+                  disabled={deletingId === t.id}
+                  onClick={() => handleDeleteTransaction(t.id)}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="rounded-xl border border-border bg-surface-1 p-4">
         <h3 className="text-sm font-medium mb-3">Últimos gastos</h3>
         {expenses.length === 0 ? (
           <p className="text-sm text-muted-foreground">Sin gastos registrados.</p>
@@ -276,6 +341,7 @@ export function AccountingDashboard({ summary: initialSummary, expenses, unpaidC
         )}
       </div>
 
+      <ManualTransactionModal open={showManualTxModal} onOpenChange={setShowManualTxModal} />
       <ExpenseModal open={showExpenseModal} onOpenChange={setShowExpenseModal} />
       <AdSpendModal open={showAdSpendModal} onOpenChange={setShowAdSpendModal} />
     </>

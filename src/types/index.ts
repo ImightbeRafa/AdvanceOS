@@ -205,6 +205,19 @@ export interface SalaryPayment {
   team_member?: Profile
 }
 
+export type ManualTransactionType = 'ingreso' | 'egreso'
+
+export interface ManualTransaction {
+  id: string
+  type: ManualTransactionType
+  description: string
+  amount_usd: number
+  date: string
+  notes: string | null
+  created_by: string | null
+  created_at: string
+}
+
 export interface Notification {
   id: string
   user_id: string

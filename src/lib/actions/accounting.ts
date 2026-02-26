@@ -2,7 +2,7 @@
 
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
-import type { ExpenseFormData, AdSpendFormData } from '@/lib/schemas'
+import type { ExpenseFormData, AdSpendFormData, ManualTransactionFormData } from '@/lib/schemas'
 
 export async function getAccountingSummary(periodStart?: string, periodEnd?: string) {
   const supabase = await createClient()
@@ -43,6 +43,10 @@ export async function getAccountingSummary(periodStart?: string, periodEnd?: str
   if (periodStart) clientsQ = clientsQ.gte('created_at', `${periodStart}T00:00:00`)
   if (periodEnd) clientsQ = clientsQ.lte('created_at', `${periodEnd}T23:59:59`)
 
+  let manualTxQ = supabase.from('manual_transactions').select('type, amount_usd, date')
+  if (periodStart) manualTxQ = manualTxQ.gte('date', periodStart)
+  if (periodEnd) manualTxQ = manualTxQ.lte('date', periodEnd)
+
   const [
     { data: payments },
     { data: expenses },
@@ -53,9 +57,10 @@ export async function getAccountingSummary(periodStart?: string, periodEnd?: str
     { data: allDeals },
     { count: setsTotal },
     { count: clientsTotal },
+    { data: manualTx },
   ] = await Promise.all([
     paymentsQ, expensesQ, commissionsQ, salariesQ, adSpendQ,
-    closedDealsQ, allDealsQ, setsQ, clientsQ,
+    closedDealsQ, allDealsQ, setsQ, clientsQ, manualTxQ,
   ])
 
   const closedDealsCount = (closedDeals ?? []).length
@@ -69,7 +74,10 @@ export async function getAccountingSummary(periodStart?: string, periodEnd?: str
   const totalSalaries = (salaryPayments ?? []).reduce((sum, s) => sum + Number(s.amount), 0)
   const totalAdSpend = (adSpends ?? []).reduce((sum, a) => sum + Number(a.amount_usd), 0)
 
-  const margin = cashNet - totalExpenses - totalSalaries - totalCommissions - totalAdSpend
+  const manualIncome = (manualTx ?? []).filter(t => t.type === 'ingreso').reduce((sum, t) => sum + Number(t.amount_usd), 0)
+  const manualDeductions = (manualTx ?? []).filter(t => t.type === 'egreso').reduce((sum, t) => sum + Number(t.amount_usd), 0)
+
+  const margin = cashNet + manualIncome - totalExpenses - totalSalaries - totalCommissions - totalAdSpend - manualDeductions
   const totalSets = setsTotal ?? 0
   const totalClients = clientsTotal ?? 0
   const totalDeals = (allDeals ?? []).length
@@ -89,6 +97,8 @@ export async function getAccountingSummary(periodStart?: string, periodEnd?: str
     unpaidCommissions,
     totalSalaries,
     totalAdSpend,
+    manualIncome,
+    manualDeductions,
     margin,
     totalSets,
     totalClients,
@@ -217,6 +227,52 @@ export async function generateSalaryPayments(periodLabel: string) {
   if (error) throw new Error(error.message)
 
   revalidatePath('/equipo/planilla')
+}
+
+export async function createManualTransaction(data: ManualTransactionFormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { error } = await supabase.from('manual_transactions').insert({
+    type: data.type,
+    description: data.description,
+    amount_usd: data.amount_usd,
+    date: data.date,
+    notes: data.notes ?? '',
+    created_by: user.id,
+  })
+
+  if (error) throw new Error(error.message)
+
+  await supabase.from('activity_log').insert({
+    entity_type: 'manual_transaction',
+    entity_id: '00000000-0000-0000-0000-000000000000',
+    action: 'created',
+    user_id: user.id,
+    details: data,
+  })
+
+  revalidatePath('/contabilidad')
+}
+
+export async function getManualTransactions() {
+  const supabase = await createClient()
+  const { data } = await supabase
+    .from('manual_transactions')
+    .select('*')
+    .order('date', { ascending: false })
+  return data ?? []
+}
+
+export async function deleteManualTransaction(id: string) {
+  const supabase = await createClient()
+  const { error } = await supabase
+    .from('manual_transactions')
+    .delete()
+    .eq('id', id)
+  if (error) throw new Error(error.message)
+  revalidatePath('/contabilidad')
 }
 
 export async function getLatestExchangeRate() {
