@@ -208,35 +208,84 @@ export function AccountingDashboard({ summary: initialSummary, expenses, manualT
         <div className="text-center text-sm text-muted-foreground py-2">Cargando...</div>
       )}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-xl border border-border bg-surface-1 p-4">
           <div className="flex items-center gap-2">
             <DollarSign className="h-4 w-4 text-success" />
-            <span className="text-sm text-muted-foreground">Cash collected (neto)</span>
+            <span className="text-sm text-muted-foreground">Cash collected</span>
           </div>
           <p className="mt-1 text-xl font-bold text-success">{fmt(summary.cashNet)}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            Bruto: {fmt(summary.cashCollected)} — Rebajos: {fmt(summary.bankFees)}
+            Bruto: {fmt(summary.cashCollected)} — Rebajos Tilopay: {fmt(summary.bankFees)}
           </p>
         </div>
         <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /><span className="text-sm text-muted-foreground">Revenue</span></div>
+          <div className="flex items-center gap-2"><TrendingUp className="h-4 w-4 text-primary" /><span className="text-sm text-muted-foreground">Revenue (valor deals)</span></div>
           <p className="mt-1 text-xl font-bold">{fmt(summary.revenue)}</p>
         </div>
         <div className="rounded-xl border border-border bg-surface-1 p-4">
           <div className="flex items-center gap-2"><TrendingUp className={`h-4 w-4 ${summary.margin >= 0 ? 'text-success' : 'text-destructive'}`} /><span className="text-sm text-muted-foreground">Margen</span></div>
           <p className={`mt-1 text-xl font-bold ${summary.margin >= 0 ? 'text-success' : 'text-destructive'}`}>{fmt(summary.margin)}</p>
         </div>
-        <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2"><Target className="h-4 w-4 text-info" /><span className="text-sm text-muted-foreground">Ad spend</span></div>
-          <p className="mt-1 text-xl font-bold">{fmt(summary.totalAdSpend)}</p>
+      </div>
+
+      <div className="rounded-xl border border-border bg-surface-1 p-4">
+        <h3 className="text-sm font-medium mb-3">Desglose del margen</h3>
+        <div className="space-y-2">
+          <div className="flex justify-between text-sm">
+            <span className="text-success">Cash collected (neto)</span>
+            <span className="font-medium text-success">+ {fmt(summary.cashNet)}</span>
+          </div>
+          {summary.manualIncome > 0 && (
+            <div className="flex justify-between text-sm">
+              <span className="text-success">Ingresos manuales</span>
+              <span className="font-medium text-success">+ {fmt(summary.manualIncome)}</span>
+            </div>
+          )}
+          <div className="border-t border-border pt-2 space-y-2">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Comisiones</span>
+              <span className="font-medium text-destructive">- {fmt(summary.totalCommissions)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Ad spend</span>
+              <span className="font-medium text-destructive">- {fmt(summary.totalAdSpend)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Gastos</span>
+              <span className="font-medium text-destructive">- {fmt(summary.totalExpenses)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Salarios</span>
+              <span className="font-medium text-destructive">- {fmt(summary.totalSalaries)}</span>
+            </div>
+            {summary.manualDeductions > 0 && (
+              <div className="flex justify-between text-sm">
+                <span className="text-muted-foreground">Egresos manuales</span>
+                <span className="font-medium text-destructive">- {fmt(summary.manualDeductions)}</span>
+              </div>
+            )}
+          </div>
+          <div className="border-t border-border pt-2">
+            <div className="flex justify-between text-sm font-semibold">
+              <span>= Margen</span>
+              <span className={summary.margin >= 0 ? 'text-success' : 'text-destructive'}>{fmt(summary.margin)}</span>
+            </div>
+          </div>
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2"><Minus className="h-4 w-4 text-destructive" /><span className="text-sm text-muted-foreground">Rebajos (Tilopay)</span></div>
-          <p className="mt-1 text-xl font-bold">{fmt(summary.bankFees)}</p>
+          <div className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /><span className="text-sm text-muted-foreground">Comisiones</span></div>
+          <p className="mt-1 text-xl font-bold">{fmt(summary.totalCommissions)}</p>
+          {summary.unpaidCommissions > 0 && (
+            <p className="text-xs text-warning mt-0.5">Sin pagar: {fmt(summary.unpaidCommissions)}</p>
+          )}
+        </div>
+        <div className="rounded-xl border border-border bg-surface-1 p-4">
+          <div className="flex items-center gap-2"><Target className="h-4 w-4 text-info" /><span className="text-sm text-muted-foreground">Ad spend</span></div>
+          <p className="mt-1 text-xl font-bold">{fmt(summary.totalAdSpend)}</p>
         </div>
         <div className="rounded-xl border border-border bg-surface-1 p-4">
           <div className="flex items-center gap-2"><Receipt className="h-4 w-4 text-warning" /><span className="text-sm text-muted-foreground">Gastos</span></div>
@@ -247,19 +296,9 @@ export function AccountingDashboard({ summary: initialSummary, expenses, manualT
           <p className="mt-1 text-xl font-bold">{fmt(summary.totalSalaries)}</p>
         </div>
         <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /><span className="text-sm text-muted-foreground">Comisiones</span></div>
-          <p className="mt-1 text-xl font-bold">{fmt(summary.totalCommissions)}</p>
-          {summary.unpaidCommissions > 0 && (
-            <p className="text-xs text-warning mt-0.5">Sin pagar: {fmt(summary.unpaidCommissions)}</p>
-          )}
-        </div>
-        <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2"><DollarSign className="h-4 w-4 text-success" /><span className="text-sm text-muted-foreground">Ingresos manuales</span></div>
-          <p className="mt-1 text-xl font-bold text-success">{fmt(summary.manualIncome)}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2"><Minus className="h-4 w-4 text-destructive" /><span className="text-sm text-muted-foreground">Egresos manuales</span></div>
-          <p className="mt-1 text-xl font-bold text-destructive">{fmt(summary.manualDeductions)}</p>
+          <div className="flex items-center gap-2"><Minus className="h-4 w-4 text-destructive" /><span className="text-sm text-muted-foreground">Rebajos Tilopay</span></div>
+          <p className="mt-1 text-xl font-bold">{fmt(summary.bankFees)}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">Ya descontado del cash neto</p>
         </div>
       </div>
 
