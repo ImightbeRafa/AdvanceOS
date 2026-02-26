@@ -4,8 +4,24 @@ import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { ExpenseFormData, AdSpendFormData, ManualTransactionFormData } from '@/lib/schemas'
 
-export async function getAccountingSummary(periodStart?: string, periodEnd?: string) {
+async function requireAdmin() {
   const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'admin') throw new Error('Sin permisos')
+
+  return { supabase, user }
+}
+
+export async function getAccountingSummary(periodStart?: string, periodEnd?: string) {
+  const { supabase } = await requireAdmin()
 
   let paymentsQ = supabase.from('payments').select('amount_gross, amount_net, fee_amount, payment_date')
   if (periodStart) paymentsQ = paymentsQ.gte('payment_date', periodStart)
@@ -112,9 +128,7 @@ export async function getAccountingSummary(periodStart?: string, periodEnd?: str
 }
 
 export async function createExpense(data: ExpenseFormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('No autenticado')
+  const { supabase, user } = await requireAdmin()
 
   const { error } = await supabase.from('expenses').insert({
     category: data.category,
@@ -138,14 +152,14 @@ export async function createExpense(data: ExpenseFormData) {
 }
 
 export async function createAdSpend(data: AdSpendFormData) {
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { error } = await supabase.from('ad_spend').insert(data)
   if (error) throw new Error(error.message)
   revalidatePath('/contabilidad')
 }
 
 export async function getExpenses() {
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { data } = await supabase
     .from('expenses')
     .select('*')
@@ -154,7 +168,7 @@ export async function getExpenses() {
 }
 
 export async function getUnpaidCommissions() {
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { data } = await supabase
     .from('commissions')
     .select(`
@@ -169,7 +183,7 @@ export async function getUnpaidCommissions() {
 }
 
 export async function getSalaryPayments() {
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { data } = await supabase
     .from('salary_payments')
     .select('*, team_member:profiles!salary_payments_team_member_id_fkey(id, full_name)')
@@ -179,7 +193,7 @@ export async function getSalaryPayments() {
 }
 
 export async function markCommissionPaid(commissionId: string) {
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { error } = await supabase
     .from('commissions')
     .update({
@@ -194,7 +208,7 @@ export async function markCommissionPaid(commissionId: string) {
 }
 
 export async function markSalaryPaid(salaryPaymentId: string) {
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { error } = await supabase
     .from('salary_payments')
     .update({ status: 'paid' })
@@ -206,7 +220,7 @@ export async function markSalaryPaid(salaryPaymentId: string) {
 }
 
 export async function generateSalaryPayments(periodLabel: string) {
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
 
   const { data: members } = await supabase
     .from('profiles')
@@ -230,9 +244,7 @@ export async function generateSalaryPayments(periodLabel: string) {
 }
 
 export async function createManualTransaction(data: ManualTransactionFormData) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('No autenticado')
+  const { supabase, user } = await requireAdmin()
 
   const { error } = await supabase.from('manual_transactions').insert({
     type: data.type,
@@ -257,7 +269,7 @@ export async function createManualTransaction(data: ManualTransactionFormData) {
 }
 
 export async function getManualTransactions() {
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { data } = await supabase
     .from('manual_transactions')
     .select('*')
@@ -266,7 +278,7 @@ export async function getManualTransactions() {
 }
 
 export async function deleteManualTransaction(id: string) {
-  const supabase = await createClient()
+  const { supabase } = await requireAdmin()
   const { error } = await supabase
     .from('manual_transactions')
     .delete()

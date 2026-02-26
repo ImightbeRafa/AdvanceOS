@@ -29,16 +29,15 @@ export async function updateSession(request: NextRequest) {
     data: { user },
   } = await supabase.auth.getUser()
 
-  const isAuthRoute = request.nextUrl.pathname.startsWith('/login') ||
-    request.nextUrl.pathname.startsWith('/registro')
+  const isLoginRoute = request.nextUrl.pathname.startsWith('/login')
 
-  if (!user && !isAuthRoute) {
+  if (!user && !isLoginRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
     return NextResponse.redirect(url)
   }
 
-  if (user && isAuthRoute) {
+  if (user && isLoginRoute) {
     const url = request.nextUrl.clone()
     url.pathname = '/'
     return NextResponse.redirect(url)

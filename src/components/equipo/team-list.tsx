@@ -7,7 +7,7 @@ import { StatusChip } from '@/components/shared/status-chip'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/constants'
 import { formatUSD } from '@/lib/utils/currency'
 import { Button } from '@/components/ui/button'
-import { MoreHorizontal, Eye, Pencil } from 'lucide-react'
+import { MoreHorizontal, Eye, Pencil, UserPlus } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -22,6 +22,9 @@ const TeamMemberDrawer = dynamic<{ member: Profile | null; open: boolean; onOpen
 const EditTeamMemberModal = dynamic<{ member: Profile | null; open: boolean; onOpenChange: (open: boolean) => void }>(
   () => import('./edit-team-member-modal').then(m => ({ default: m.EditTeamMemberModal }))
 )
+const InviteMemberModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void }>(
+  () => import('./invite-member-modal').then(m => ({ default: m.InviteMemberModal }))
+)
 
 interface TeamListProps {
   members: Profile[]
@@ -30,6 +33,7 @@ interface TeamListProps {
 export function TeamList({ members }: TeamListProps) {
   const [selectedMember, setSelectedMember] = useState<Profile | null>(null)
   const [editingMember, setEditingMember] = useState<Profile | null>(null)
+  const [inviteOpen, setInviteOpen] = useState(false)
 
   const columns: Column<Profile>[] = [
     {
@@ -90,6 +94,13 @@ export function TeamList({ members }: TeamListProps) {
 
   return (
     <>
+      <div className="flex justify-end">
+        <Button onClick={() => setInviteOpen(true)}>
+          <UserPlus className="mr-2 h-4 w-4" />
+          Invitar miembro
+        </Button>
+      </div>
+
       <DataTable
         data={members}
         columns={columns}
@@ -128,6 +139,11 @@ export function TeamList({ members }: TeamListProps) {
         member={editingMember}
         open={!!editingMember}
         onOpenChange={(open) => !open && setEditingMember(null)}
+      />
+
+      <InviteMemberModal
+        open={inviteOpen}
+        onOpenChange={setInviteOpen}
       />
     </>
   )

@@ -5,14 +5,6 @@ export const loginSchema = z.object({
   password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
 })
 
-export const registerSchema = z.object({
-  full_name: z.string().min(2, 'El nombre es requerido'),
-  email: z.string().email('Email inválido'),
-  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
-  whatsapp: z.string().min(8, 'WhatsApp es requerido'),
-  bac_account: z.string().optional(),
-})
-
 export const createSetSchema = z.object({
   prospect_name: z.string().min(1, 'El nombre del prospecto es requerido'),
   prospect_whatsapp: z.string().min(8, 'WhatsApp es requerido'),
@@ -107,6 +99,23 @@ export const feedbackReplySchema = z.object({
   is_internal: z.boolean(),
 })
 
+export const inviteSchema = z.object({
+  email: z.string().email('Email inválido'),
+  full_name: z.string().min(2, 'El nombre es requerido'),
+  role: z.enum(['setter', 'closer', 'admin', 'delivery'], {
+    message: 'Seleccioná un rol',
+  }),
+})
+
+export const setupPasswordSchema = z.object({
+  password: z.string().min(6, 'La contraseña debe tener al menos 6 caracteres'),
+  confirm_password: z.string().min(6, 'La confirmación es requerida'),
+  whatsapp: z.string().min(8, 'WhatsApp es requerido'),
+}).refine((data) => data.password === data.confirm_password, {
+  message: 'Las contraseñas no coinciden',
+  path: ['confirm_password'],
+})
+
 export const manualTransactionSchema = z.object({
   type: z.enum(['ingreso', 'egreso'], { message: 'Seleccioná el tipo' }),
   description: z.string().min(1, 'La descripción es requerida'),
@@ -119,7 +128,6 @@ export type ManualTransactionFormData = z.infer<typeof manualTransactionSchema>
 export type ProfileEditFormData = z.infer<typeof profileEditSchema>
 export type PasswordChangeFormData = z.infer<typeof passwordChangeSchema>
 export type LoginFormData = z.infer<typeof loginSchema>
-export type RegisterFormData = z.infer<typeof registerSchema>
 export type CreateSetFormData = z.infer<typeof createSetSchema>
 export type CloseDealFormData = z.infer<typeof closeDealSchema>
 export type FollowUpFormData = z.infer<typeof followUpSchema>
@@ -130,3 +138,5 @@ export type ExpenseFormData = z.infer<typeof expenseSchema>
 export type AdSpendFormData = z.infer<typeof adSpendSchema>
 export type FeedbackTicketFormData = z.infer<typeof feedbackTicketSchema>
 export type FeedbackReplyFormData = z.infer<typeof feedbackReplySchema>
+export type InviteFormData = z.infer<typeof inviteSchema>
+export type SetupPasswordFormData = z.infer<typeof setupPasswordSchema>

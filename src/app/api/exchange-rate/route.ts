@@ -1,7 +1,20 @@
 import { NextResponse } from 'next/server'
-import { createServiceClient } from '@/lib/supabase/server'
+import { createServiceClient, createClient } from '@/lib/supabase/server'
 
-export async function GET() {
+export async function GET(request: Request) {
+  const authHeader = request.headers.get('authorization')
+  const expectedToken = process.env.CRON_SECRET ?? process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  const isCronAuth = authHeader === `Bearer ${expectedToken}`
+
+  if (!isCronAuth) {
+    const supabase = await createClient()
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+    }
+  }
+
   try {
     const response = await fetch(
       'https://api.exchangerate-api.com/v4/latest/USD'
@@ -26,7 +39,7 @@ export async function GET() {
       }, { onConflict: 'date' })
 
     return NextResponse.json({ date: today, usd_to_crc: crcRate })
-  } catch (error) {
+  } catch {
     return NextResponse.json({ error: 'Internal error' }, { status: 500 })
   }
 }
