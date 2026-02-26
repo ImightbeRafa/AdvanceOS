@@ -40,11 +40,19 @@ const PaymentModal = dynamic<{ set: Set; clientId: string | null; open: boolean;
 )
 import { useSavedFilters } from '@/lib/hooks/use-saved-filters'
 
+export interface PaymentRecord {
+  set_id: string
+  amount_gross: number
+  amount_net: number
+  payment_date: string
+}
+
 interface VentasDashboardProps {
   sets: Set[]
   closers: Pick<Profile, 'id' | 'full_name'>[]
   setters: Pick<Profile, 'id' | 'full_name'>[]
   paymentsBySet: Record<string, { totalGross: number; totalNet: number }>
+  allPayments: PaymentRecord[]
   userRole: UserRole
 }
 
@@ -54,7 +62,7 @@ function getLatestDeal(s: Set): Deal | null {
   return s.deal
 }
 
-export function VentasDashboard({ sets, closers, setters, paymentsBySet, userRole }: VentasDashboardProps) {
+export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPayments, userRole }: VentasDashboardProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -129,12 +137,10 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, userRol
     ? (closedDealsMTD.length / latestDealsBySetMTD.length * 100) : 0
 
   const cashNetMTD = useMemo(() => {
-    let total = 0
-    for (const val of Object.values(paymentsBySet)) {
-      total += val.totalNet
-    }
-    return total
-  }, [paymentsBySet])
+    return allPayments
+      .filter(p => p.payment_date >= monthStart)
+      .reduce((sum, p) => sum + p.amount_net, 0)
+  }, [allPayments, monthStart])
 
   const pendingPaymentSets = useMemo(() =>
     sets.filter((s) => s.status === 'closed_pendiente'),

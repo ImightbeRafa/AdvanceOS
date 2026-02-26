@@ -25,7 +25,8 @@ export default async function VentasPage() {
       .limit(500),
     supabase
       .from('payments')
-      .select('set_id, amount_gross, amount_net, payment_date'),
+      .select('set_id, amount_gross, amount_net, payment_date')
+      .order('payment_date', { ascending: false }),
     supabase
       .from('profiles')
       .select('id, full_name')
@@ -38,10 +39,17 @@ export default async function VentasPage() {
       .eq('active', true),
   ])
 
-  const paymentsBySet = (payments ?? []).reduce<Record<string, { totalGross: number; totalNet: number }>>((acc, p) => {
+  const allPayments = (payments ?? []).map(p => ({
+    set_id: p.set_id as string,
+    amount_gross: Number(p.amount_gross),
+    amount_net: Number(p.amount_net),
+    payment_date: p.payment_date as string,
+  }))
+
+  const paymentsBySet = allPayments.reduce<Record<string, { totalGross: number; totalNet: number }>>((acc, p) => {
     if (!acc[p.set_id]) acc[p.set_id] = { totalGross: 0, totalNet: 0 }
-    acc[p.set_id].totalGross += Number(p.amount_gross)
-    acc[p.set_id].totalNet += Number(p.amount_net)
+    acc[p.set_id].totalGross += p.amount_gross
+    acc[p.set_id].totalNet += p.amount_net
     return acc
   }, {})
 
@@ -60,6 +68,7 @@ export default async function VentasPage() {
         closers={closers ?? []}
         setters={setters ?? []}
         paymentsBySet={paymentsBySet}
+        allPayments={allPayments}
         userRole={profile.role}
       />
     </div>
