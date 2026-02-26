@@ -9,8 +9,7 @@ export async function getClients() {
     .from('clients')
     .select(`
       *,
-      assigned_member:profiles!clients_assigned_to_fkey(id, full_name),
-      tasks(id, title, status, due_date)
+      assigned_member:profiles!clients_assigned_to_fkey(id, full_name)
     `)
     .order('created_at', { ascending: false })
 
@@ -108,26 +107,6 @@ export async function getClientPayments(clientId: string) {
   return data ?? []
 }
 
-export async function getClientTasks(clientId: string) {
-  const supabase = await createClient()
-  const { data } = await supabase
-    .from('tasks')
-    .select('*, assigned_member:profiles!tasks_assigned_to_fkey(id, full_name)')
-    .eq('client_id', clientId)
-    .order('due_date')
-
-  return data ?? []
-}
-
-export async function updateTaskStatus(taskId: string, status: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('No autenticado')
-
-  await supabase.from('tasks').update({ status }).eq('id', taskId)
-  revalidatePath('/clientes')
-}
-
 export async function getClientAssets(clientId: string) {
   const supabase = await createClient()
   const { data } = await supabase
@@ -143,7 +122,7 @@ export async function getClientPhases(clientId: string) {
   const supabase = await createClient()
   const { data } = await supabase
     .from('advance90_phases')
-    .select('*, tasks(*)')
+    .select('*')
     .eq('client_id', clientId)
     .order('order')
 
@@ -202,6 +181,121 @@ export async function saveClientForm(
     await supabase
       .from('client_forms')
       .insert({ client_id: clientId, business_type: businessType, form_data: formData, progress_pct: progressPct, completed })
+  }
+
+  if (completed && progressPct >= 100) {
+    await generateClientBrief(clientId)
+  }
+
+  revalidatePath(`/clientes/${clientId}`)
+}
+
+export async function createClientAsset(
+  clientId: string,
+  asset: { type: string; name: string; url: string; notes?: string }
+) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { error } = await supabase.from('client_assets').insert({
+    client_id: clientId,
+    type: asset.type,
+    name: asset.name,
+    url: asset.url,
+    notes: asset.notes ?? null,
+    uploaded_by: user.id,
+  })
+
+  if (error) throw new Error(error.message)
+  revalidatePath(`/clientes/${clientId}`)
+}
+
+export async function generateClientBrief(clientId: string) {
+  const supabase = await createClient()
+
+  const { data: form } = await supabase
+    .from('client_forms')
+    .select('*')
+    .eq('client_id', clientId)
+    .order('created_at', { ascending: false })
+    .limit(1)
+    .maybeSingle()
+
+  if (!form || !form.completed) return
+
+  const { data: client } = await supabase
+    .from('clients')
+    .select('business_name, service')
+    .eq('id', clientId)
+    .single()
+
+  const formData = form.form_data as Record<string, unknown>
+  const lines: string[] = []
+  lines.push(`# Brief del cliente: ${client?.business_name ?? 'N/A'}`)
+  lines.push(`**Tipo de negocio:** ${form.business_type}`)
+  lines.push(`**Servicio:** ${client?.service ?? 'N/A'}`)
+  lines.push('')
+  lines.push('## Datos del formulario')
+  for (const [key, value] of Object.entries(formData)) {
+    if (value !== null && value !== undefined && value !== '') {
+      const label = key.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())
+      lines.push(`- **${label}:** ${String(value)}`)
+    }
+  }
+  const briefContent = lines.join('\n')
+
+  const { data: existingBrief } = await supabase
+    .from('client_assets')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('name', 'Brief del cliente')
+    .limit(1)
+    .maybeSingle()
+
+  if (existingBrief) {
+    await supabase
+      .from('client_assets')
+      .update({ url: briefContent, notes: 'Auto-generado desde formulario completo' })
+      .eq('id', existingBrief.id)
+  } else {
+    await supabase.from('client_assets').insert({
+      client_id: clientId,
+      type: 'link',
+      name: 'Brief del cliente',
+      url: briefContent,
+      notes: 'Auto-generado desde formulario completo',
+    })
+  }
+
+  const { data: existingSummary } = await supabase
+    .from('client_assets')
+    .select('id')
+    .eq('client_id', clientId)
+    .eq('name', 'Resumen del formulario')
+    .limit(1)
+    .maybeSingle()
+
+  const summaryLines: string[] = []
+  summaryLines.push(`Formulario completado para ${client?.business_name ?? 'N/A'}`)
+  summaryLines.push(`Tipo: ${form.business_type}`)
+  const fieldCount = Object.keys(formData).filter((k) => formData[k] !== null && formData[k] !== '' && formData[k] !== undefined).length
+  summaryLines.push(`Campos completados: ${fieldCount}`)
+  const summaryContent = summaryLines.join(' | ')
+
+  if (existingSummary) {
+    await supabase
+      .from('client_assets')
+      .update({ url: summaryContent, notes: 'Auto-generado' })
+      .eq('id', existingSummary.id)
+  } else {
+    await supabase.from('client_assets').insert({
+      client_id: clientId,
+      type: 'link',
+      name: 'Resumen del formulario',
+      url: summaryContent,
+      notes: 'Auto-generado',
+    })
   }
 
   revalidatePath(`/clientes/${clientId}`)

@@ -4,6 +4,7 @@ import { useState } from 'react'
 import { Sidebar } from './sidebar'
 import { TopBar } from './topbar'
 import { GlobalSearch } from '@/components/shared/global-search'
+import { FeedbackWidget } from '@/components/feedback/feedback-widget'
 import { cn } from '@/lib/utils'
 import type { Profile, Notification } from '@/types'
 
@@ -30,6 +31,7 @@ export function DashboardShell({ children, profile, notificationCount, notificat
         <main className="p-6">{children}</main>
       </div>
       <GlobalSearch />
+      <FeedbackWidget />
     </div>
   )
 }

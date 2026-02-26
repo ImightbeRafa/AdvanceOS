@@ -3,7 +3,7 @@
 import { createClient } from '@/lib/supabase/server'
 import { revalidatePath } from 'next/cache'
 import type { CreateSetFormData, CloseDealFormData, FollowUpFormData, DisqualifyFormData } from '@/lib/schemas'
-import { VALID_STATUS_TRANSITIONS, ONBOARDING_CHECKLIST_TEMPLATE, ADVANCE90_PHASES, ADVANCE90_TASKS_TEMPLATE } from '@/lib/constants'
+import { VALID_STATUS_TRANSITIONS, ONBOARDING_CHECKLIST_TEMPLATE, ADVANCE90_PHASES } from '@/lib/constants'
 import { calculateTilopayFee, calculateCommission } from '@/lib/utils/currency'
 import type { SetStatus } from '@/types'
 import { addDays, format } from 'date-fns'
@@ -178,25 +178,9 @@ export async function createDealClosed(setId: string, data: CloseDealFormData) {
       order: phase.order,
     }))
 
-    const { data: insertedPhases } = await supabase
+    await supabase
       .from('advance90_phases')
       .insert(phases)
-      .select()
-
-    if (insertedPhases) {
-      const tasks = ADVANCE90_TASKS_TEMPLATE.map((task) => {
-        const phase = insertedPhases.find((p) => p.order === task.phase_order)
-        return {
-          client_id: client.id,
-          phase_id: phase?.id ?? null,
-          title: task.title,
-          description: task.description,
-          due_date: phase?.end_date ?? null,
-          status: 'pendiente',
-        }
-      })
-      await supabase.from('tasks').insert(tasks)
-    }
   }
 
   if (data.amount_collected && data.amount_collected > 0 && data.payment_method) {

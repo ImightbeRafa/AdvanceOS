@@ -14,7 +14,6 @@ export async function GET(request: Request) {
   const supabase = await createServiceClient()
   const today = new Date().toISOString().split('T')[0]
   let followUpCount = 0
-  let taskCount = 0
 
   const { data: followUpDeals } = await supabase
     .from('deals')
@@ -48,41 +47,9 @@ export async function GET(request: Request) {
     followUpCount++
   }
 
-  const { data: dueTasks } = await supabase
-    .from('tasks')
-    .select('id, title, assigned_to, client_id')
-    .eq('due_date', today)
-    .in('status', ['pendiente', 'en_progreso'])
-    .not('assigned_to', 'is', null)
-
-  for (const task of dueTasks ?? []) {
-    if (!task.assigned_to) continue
-
-    const { data: existing } = await supabase
-      .from('notifications')
-      .select('id')
-      .eq('user_id', task.assigned_to)
-      .eq('type', 'task_due_today')
-      .gte('created_at', `${today}T00:00:00`)
-      .like('message', `%${task.title}%`)
-      .limit(1)
-
-    if (existing && existing.length > 0) continue
-
-    await supabase.from('notifications').insert({
-      user_id: task.assigned_to,
-      type: 'task_due_today',
-      title: 'Tarea vence hoy',
-      message: `La tarea "${task.title}" vence hoy`,
-      action_url: task.client_id ? `/clientes/${task.client_id}` : '/clientes',
-    })
-    taskCount++
-  }
-
   return NextResponse.json({
     ok: true,
     date: today,
     followUpNotifications: followUpCount,
-    taskNotifications: taskCount,
   })
 }

@@ -25,24 +25,8 @@ export function TeamMemberDrawer({ member, open, onOpenChange, userRole }: TeamM
       description={ROLE_LABELS[member.role]}
     >
       <div className="space-y-4">
-        <div className="space-y-2">
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Rol</span>
-            <StatusChip label={ROLE_LABELS[member.role]} colorClass={ROLE_COLORS[member.role]} />
-          </div>
-          <div className="flex items-center justify-between">
-            <span className="text-sm text-muted-foreground">Estado</span>
-            <StatusChip
-              label={member.active ? 'Activo' : 'Inactivo'}
-              colorClass={member.active ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground'}
-            />
-          </div>
-        </div>
-
-        <Separator />
-
         <div className="space-y-3">
-          <h4 className="text-sm font-medium">Contacto</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Info personal</h4>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Email</span>
@@ -65,7 +49,26 @@ export function TeamMemberDrawer({ member, open, onOpenChange, userRole }: TeamM
         <Separator />
 
         <div className="space-y-3">
-          <h4 className="text-sm font-medium">Planilla</h4>
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Acceso</h4>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Rol</span>
+              <StatusChip label={ROLE_LABELS[member.role]} colorClass={ROLE_COLORS[member.role]} />
+            </div>
+            <div className="flex items-center justify-between">
+              <span className="text-sm text-muted-foreground">Estado</span>
+              <StatusChip
+                label={member.active ? 'Activo' : 'Inactivo'}
+                colorClass={member.active ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground'}
+              />
+            </div>
+          </div>
+        </div>
+
+        <Separator />
+
+        <div className="space-y-3">
+          <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Pago</h4>
           <div className="space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-sm text-muted-foreground">Salario</span>
@@ -85,8 +88,8 @@ export function TeamMemberDrawer({ member, open, onOpenChange, userRole }: TeamM
         {member.bac_account_encrypted && userRole === 'admin' && (
           <>
             <Separator />
-            <div className="space-y-2">
-              <h4 className="text-sm font-medium">Datos bancarios</h4>
+            <div className="space-y-3">
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Banco</h4>
               <div className="flex items-center justify-between">
                 <span className="text-sm text-muted-foreground">Cuenta BAC (USD)</span>
                 <span className="text-sm font-mono">{member.bac_account_encrypted}</span>
@@ -99,7 +102,7 @@ export function TeamMemberDrawer({ member, open, onOpenChange, userRole }: TeamM
           <>
             <Separator />
             <div className="space-y-2">
-              <h4 className="text-sm font-medium">Notas internas</h4>
+              <h4 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Notas internas</h4>
               <p className="text-sm text-muted-foreground">{member.admin_notes}</p>
             </div>
           </>

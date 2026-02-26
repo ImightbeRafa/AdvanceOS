@@ -18,7 +18,11 @@ export default async function ContabilidadPage() {
 
   if (profile?.role !== 'admin') redirect('/')
 
-  const summary = await getAccountingSummary()
+  const now = new Date()
+  const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+  const today = now.toISOString().split('T')[0]
+
+  const summary = await getAccountingSummary(monthStart, today)
   const expenses = await getExpenses()
   const unpaidCommissions = await getUnpaidCommissions()
 
@@ -42,6 +46,7 @@ export default async function ContabilidadPage() {
         expenses={expenses}
         unpaidCommissions={unpaidCommissions}
         exchangeRate={exchangeRate?.usd_to_crc ?? 530}
+        initialPeriod="mtd"
       />
     </div>
   )

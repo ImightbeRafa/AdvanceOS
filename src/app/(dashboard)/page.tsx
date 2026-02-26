@@ -26,13 +26,7 @@ export default async function HomePage() {
     .from('sets')
     .select('*, setter:profiles!sets_setter_id_fkey(id, full_name), closer:profiles!sets_closer_id_fkey(id, full_name), deal:deals(*)')
     .order('scheduled_at', { ascending: true })
-    .limit(100)
-
-  const { data: tasks } = await supabase
-    .from('tasks')
-    .select('*, client:clients(business_name)')
-    .order('due_date')
-    .limit(50)
+    .limit(200)
 
   const { data: unpaidCommissions } = await supabase
     .from('commissions')
@@ -46,13 +40,44 @@ export default async function HomePage() {
     case 'setter':
       return <SetterDashboard profile={profile} sets={sets ?? []} commissionsTotal={myCommissionsTotal} />
     case 'closer':
-      return <CloserDashboard profile={profile} sets={sets ?? []} tasks={tasks ?? []} commissionsTotal={myCommissionsTotal} />
+      return <CloserDashboard profile={profile} sets={sets ?? []} commissionsTotal={myCommissionsTotal} />
     case 'admin': {
-      const accountingSummary = await getAccountingSummary()
-      return <AdminDashboard profile={profile} sets={sets ?? []} tasks={tasks ?? []} accounting={accountingSummary} />
+      const now = new Date()
+      const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split('T')[0]
+      const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split('T')[0]
+      const accountingSummary = await getAccountingSummary(monthStart, monthEnd)
+
+      const { data: payments } = await supabase
+        .from('payments')
+        .select('set_id, amount_gross')
+
+      const paymentsBySet = (payments ?? []).reduce<Record<string, number>>((acc, p) => {
+        acc[p.set_id] = (acc[p.set_id] ?? 0) + Number(p.amount_gross)
+        return acc
+      }, {})
+
+      return <AdminDashboard profile={profile} sets={sets ?? []} accounting={accountingSummary} paymentsBySet={paymentsBySet} />
     }
-    case 'delivery':
-      return <DeliveryDashboard profile={profile} tasks={tasks ?? []} />
+    case 'delivery': {
+      const { data: clients } = await supabase
+        .from('clients')
+        .select('*, assigned_member:profiles!clients_assigned_to_fkey(id, full_name)')
+        .eq('assigned_to', user.id)
+        .order('created_at', { ascending: false })
+
+      const clientIds = (clients ?? []).map((c) => c.id)
+      let phases: { client_id: string; phase_name: string; start_date: string; end_date: string; order: number }[] = []
+      if (clientIds.length > 0) {
+        const { data: phaseData } = await supabase
+          .from('advance90_phases')
+          .select('client_id, phase_name, start_date, end_date, order')
+          .in('client_id', clientIds)
+          .order('order')
+        phases = phaseData ?? []
+      }
+
+      return <DeliveryDashboard profile={profile} clients={clients ?? []} phases={phases} />
+    }
     default:
       redirect('/login')
   }

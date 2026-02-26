@@ -28,7 +28,18 @@ export default async function VentasPage() {
       deal:deals(*)
     `)
     .order('created_at', { ascending: false })
-    .limit(200)
+    .limit(500)
+
+  const { data: payments } = await supabase
+    .from('payments')
+    .select('set_id, amount_gross, amount_net, payment_date')
+
+  const paymentsBySet = (payments ?? []).reduce<Record<string, { totalGross: number; totalNet: number }>>((acc, p) => {
+    if (!acc[p.set_id]) acc[p.set_id] = { totalGross: 0, totalNet: 0 }
+    acc[p.set_id].totalGross += Number(p.amount_gross)
+    acc[p.set_id].totalNet += Number(p.amount_net)
+    return acc
+  }, {})
 
   const { data: closers } = await supabase
     .from('profiles')
@@ -48,7 +59,7 @@ export default async function VentasPage() {
         <div>
           <h1 className="text-2xl font-bold tracking-tight">Ventas</h1>
           <p className="text-muted-foreground">
-            Gestión de sets, deals y pipeline de ventas.
+            Pipeline de ventas: setting, closing, pendientes y estadísticas.
           </p>
         </div>
       </div>
@@ -56,6 +67,7 @@ export default async function VentasPage() {
         sets={sets ?? []}
         closers={closers ?? []}
         setters={setters ?? []}
+        paymentsBySet={paymentsBySet}
         userRole={profile.role}
       />
     </div>

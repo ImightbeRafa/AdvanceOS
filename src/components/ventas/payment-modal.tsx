@@ -52,7 +52,7 @@ export function PaymentModal({ set, clientId, open, onOpenChange }: PaymentModal
   async function onSubmit(data: PaymentFormData) {
     setLoading(true)
     try {
-      await registerPayment(set.id, clientId ?? '', data)
+      await registerPayment(set.id, clientId, data)
       toast.success('Pago registrado')
       onOpenChange(false)
       router.refresh()

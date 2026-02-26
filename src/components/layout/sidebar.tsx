@@ -10,6 +10,7 @@ import {
   DollarSign,
   Settings,
   Wallet,
+  MessageSquare,
   ChevronLeft,
   ChevronRight,
   Zap,
@@ -29,6 +30,7 @@ const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   DollarSign,
   Settings,
   Wallet,
+  MessageSquare,
 }
 
 interface SidebarProps {

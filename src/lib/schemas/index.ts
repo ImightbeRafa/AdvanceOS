@@ -91,6 +91,22 @@ export const passwordChangeSchema = z.object({
   path: ['confirm_password'],
 })
 
+export const feedbackTicketSchema = z.object({
+  category: z.enum(['bug', 'sugerencia', 'pregunta', 'queja', 'otro'], {
+    message: 'Seleccioná una categoría',
+  }),
+  priority: z.enum(['baja', 'media', 'alta', 'urgente'], {
+    message: 'Seleccioná la prioridad',
+  }),
+  subject: z.string().min(1, 'El asunto es requerido').max(200, 'Máximo 200 caracteres'),
+  description: z.string().min(1, 'La descripción es requerida').max(2000, 'Máximo 2000 caracteres'),
+})
+
+export const feedbackReplySchema = z.object({
+  message: z.string().min(1, 'El mensaje es requerido').max(2000, 'Máximo 2000 caracteres'),
+  is_internal: z.boolean().optional().default(false),
+})
+
 export type ProfileEditFormData = z.infer<typeof profileEditSchema>
 export type PasswordChangeFormData = z.infer<typeof passwordChangeSchema>
 export type LoginFormData = z.infer<typeof loginSchema>
@@ -103,3 +119,5 @@ export type PaymentFormData = z.infer<typeof paymentSchema>
 export type TeamMemberFormData = z.infer<typeof teamMemberSchema>
 export type ExpenseFormData = z.infer<typeof expenseSchema>
 export type AdSpendFormData = z.infer<typeof adSpendSchema>
+export type FeedbackTicketFormData = z.infer<typeof feedbackTicketSchema>
+export type FeedbackReplyFormData = z.infer<typeof feedbackReplySchema>

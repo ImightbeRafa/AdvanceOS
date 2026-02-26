@@ -19,7 +19,6 @@ export type ClientStatus = 'onboarding' | 'activo' | 'pausado' | 'completado'
 export type PaymentMethod = 'transferencia' | 'sinpe' | 'tilopay' | 'crypto' | 'otro'
 export type TilopayInstallmentMonths = 3 | 6 | 12
 
-export type TaskStatus = 'pendiente' | 'en_progreso' | 'bloqueado' | 'listo'
 export type PhaseStatus = 'pendiente' | 'en_progreso' | 'completado'
 
 export type ExpenseCategory = 'ads' | 'software' | 'oficina' | 'otro'
@@ -130,7 +129,6 @@ export interface Client {
   deal?: Deal
   set?: Set
   assigned_member?: Profile
-  tasks?: Task[]
 }
 
 export interface OnboardingChecklistItem {
@@ -163,20 +161,6 @@ export interface Advance90Phase {
   end_date: string
   status: PhaseStatus
   order: number
-  tasks?: Task[]
-}
-
-export interface Task {
-  id: string
-  client_id: string
-  phase_id: string | null
-  title: string
-  description: string | null
-  assigned_to: string | null
-  due_date: string | null
-  status: TaskStatus
-  created_at: string
-  assigned_member?: Profile
 }
 
 export interface ClientAsset {
@@ -249,4 +233,45 @@ export interface ExchangeRate {
   usd_to_crc: number
   source: string
   created_at: string
+}
+
+export type FeedbackCategory = 'bug' | 'sugerencia' | 'pregunta' | 'queja' | 'otro'
+export type FeedbackPriority = 'baja' | 'media' | 'alta' | 'urgente'
+export type FeedbackStatus = 'abierto' | 'en_revision' | 'resuelto' | 'cerrado'
+
+export interface FeedbackContext {
+  page_url: string
+  page_title: string
+  nav_trail: string[]
+  browser: string
+  screen: string
+  timestamp: string
+}
+
+export interface FeedbackTicket {
+  id: string
+  user_id: string
+  category: FeedbackCategory
+  priority: FeedbackPriority
+  subject: string
+  description: string
+  status: FeedbackStatus
+  assigned_to: string | null
+  admin_notes: string | null
+  metadata: FeedbackContext | null
+  created_at: string
+  updated_at: string
+  user?: Profile
+  assigned_member?: Profile
+  replies?: FeedbackReply[]
+}
+
+export interface FeedbackReply {
+  id: string
+  ticket_id: string
+  user_id: string
+  message: string
+  is_internal: boolean
+  created_at: string
+  user?: Profile
 }

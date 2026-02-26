@@ -1,75 +1,117 @@
 'use client'
 
-import type { Profile, Task } from '@/types'
+import type { Profile, Client } from '@/types'
 import { StatusChip } from '@/components/shared/status-chip'
-import { TASK_STATUS_LABELS, TASK_STATUS_COLORS } from '@/lib/constants'
-import { formatDate, isDatePast } from '@/lib/utils/dates'
-import { CheckCircle, AlertTriangle, Clock, ListTodo } from 'lucide-react'
+import { CLIENT_STATUS_LABELS, CLIENT_STATUS_COLORS } from '@/lib/constants'
+import { Users, Layers } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import Link from 'next/link'
 
-interface DeliveryDashboardProps {
-  profile: Profile
-  tasks: (Task & { client?: { business_name: string } })[]
+interface PhaseInfo {
+  client_id: string
+  phase_name: string
+  start_date: string
+  end_date: string
+  order: number
 }
 
-export function DeliveryDashboard({ profile, tasks }: DeliveryDashboardProps) {
-  const myTasks = tasks.filter((t) => t.assigned_to === profile.id)
-  const pendingTasks = myTasks.filter((t) => t.status === 'pendiente')
-  const inProgressTasks = myTasks.filter((t) => t.status === 'en_progreso')
-  const overdueTasks = myTasks.filter((t) => t.due_date && isDatePast(t.due_date) && t.status !== 'listo')
-  const completedTasks = myTasks.filter((t) => t.status === 'listo')
+interface DeliveryDashboardProps {
+  profile: Profile
+  clients: Client[]
+  phases: PhaseInfo[]
+}
+
+function getCurrentPhase(clientPhases: PhaseInfo[]): string | null {
+  if (clientPhases.length === 0) return null
+  const today = new Date().toISOString().split('T')[0]
+  const active = clientPhases.find((p) => p.start_date <= today && p.end_date >= today)
+  if (active) return active.phase_name
+  const future = clientPhases.find((p) => p.start_date > today)
+  if (future) return future.phase_name
+  return clientPhases[clientPhases.length - 1].phase_name
+}
+
+export function DeliveryDashboard({ profile, clients, phases }: DeliveryDashboardProps) {
+  const phasesByClient = phases.reduce<Record<string, PhaseInfo[]>>((acc, p) => {
+    if (!acc[p.client_id]) acc[p.client_id] = []
+    acc[p.client_id].push(p)
+    return acc
+  }, {})
+
+  const advance90Clients = clients.filter((c) => c.service === 'advance90')
+  const phaseGroups: Record<string, Client[]> = {}
+  for (const client of advance90Clients) {
+    const phaseName = getCurrentPhase(phasesByClient[client.id] ?? []) ?? 'Sin fase'
+    if (!phaseGroups[phaseName]) phaseGroups[phaseName] = []
+    phaseGroups[phaseName].push(client)
+  }
+
+  const activeClients = clients.filter((c) => ['onboarding', 'activo'].includes(c.status))
 
   return (
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Hola, {profile.full_name.split(' ')[0]}</h1>
-        <p className="text-muted-foreground">Tus tareas y entregables.</p>
+        <p className="text-muted-foreground">Tus clientes asignados y cronogramas.</p>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2 text-muted-foreground"><ListTodo className="h-4 w-4" /><span className="text-sm">Pendientes</span></div>
-          <p className="mt-1 text-2xl font-bold">{pendingTasks.length}</p>
+          <div className="flex items-center gap-2 text-muted-foreground"><Users className="h-4 w-4" /><span className="text-sm">Clientes asignados</span></div>
+          <p className="mt-1 text-2xl font-bold">{clients.length}</p>
         </div>
         <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2 text-info"><Clock className="h-4 w-4" /><span className="text-sm">En progreso</span></div>
-          <p className="mt-1 text-2xl font-bold">{inProgressTasks.length}</p>
+          <div className="flex items-center gap-2 text-success"><Users className="h-4 w-4" /><span className="text-sm">Activos / Onboarding</span></div>
+          <p className="mt-1 text-2xl font-bold">{activeClients.length}</p>
         </div>
         <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2 text-destructive"><AlertTriangle className="h-4 w-4" /><span className="text-sm">Vencidas</span></div>
-          <p className="mt-1 text-2xl font-bold">{overdueTasks.length}</p>
-        </div>
-        <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center gap-2 text-success"><CheckCircle className="h-4 w-4" /><span className="text-sm">Completadas</span></div>
-          <p className="mt-1 text-2xl font-bold">{completedTasks.length}</p>
+          <div className="flex items-center gap-2 text-muted-foreground"><Layers className="h-4 w-4" /><span className="text-sm">Advance90</span></div>
+          <p className="mt-1 text-2xl font-bold">{advance90Clients.length}</p>
         </div>
       </div>
+
+      {Object.keys(phaseGroups).length > 0 && (
+        <div>
+          <h2 className="text-lg font-semibold mb-3">Clientes por fase (Advance90)</h2>
+          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {Object.entries(phaseGroups).map(([phaseName, phaseClients]) => (
+              <div key={phaseName} className="rounded-xl border border-border bg-surface-1 p-4">
+                <h3 className="text-sm font-medium text-muted-foreground mb-2">{phaseName}</h3>
+                <div className="space-y-1">
+                  {phaseClients.map((c) => (
+                    <Link key={c.id} href={`/clientes/${c.id}`} className="flex items-center justify-between text-sm hover:bg-surface-2 rounded-lg p-1.5 -mx-1.5 transition-colors">
+                      <span>{c.business_name}</span>
+                      <StatusChip label={CLIENT_STATUS_LABELS[c.status]} colorClass={CLIENT_STATUS_COLORS[c.status]} size="sm" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div>
         <div className="flex items-center justify-between mb-3">
-          <h2 className="text-lg font-semibold">Mis tareas</h2>
-          <Link href="/clientes"><Button size="sm" variant="outline">Ver clientes</Button></Link>
+          <h2 className="text-lg font-semibold">Mis clientes</h2>
+          <Link href="/clientes"><Button size="sm" variant="outline">Ver todos</Button></Link>
         </div>
-        {myTasks.filter((t) => t.status !== 'listo').length === 0 ? (
+        {clients.length === 0 ? (
           <div className="rounded-xl border border-border bg-surface-1 p-6 text-center text-sm text-muted-foreground">
-            ¡Todo al día! No tenés tareas pendientes.
+            No tenés clientes asignados.
           </div>
         ) : (
           <div className="space-y-2">
-            {myTasks.filter((t) => t.status !== 'listo').map((t) => (
-              <div key={t.id} className="rounded-xl border border-border bg-surface-1 p-3">
+            {clients.map((c) => (
+              <Link key={c.id} href={`/clientes/${c.id}`} className="block rounded-xl border border-border bg-surface-1 p-3 hover:bg-surface-2 transition-colors">
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-sm font-medium">{t.title}</span>
-                    {t.client && <p className="text-xs text-muted-foreground">{t.client.business_name}</p>}
+                    <span className="font-medium text-sm">{c.business_name}</span>
+                    <p className="text-xs text-muted-foreground">{c.service === 'advance90' ? 'Advance90' : c.service === 'meta_advance' ? 'Meta Advance' : 'Retención'}</p>
                   </div>
-                  <div className="flex items-center gap-2">
-                    {t.due_date && <span className="text-xs text-muted-foreground">{formatDate(t.due_date)}</span>}
-                    <StatusChip label={TASK_STATUS_LABELS[t.status]} colorClass={TASK_STATUS_COLORS[t.status]} />
-                  </div>
+                  <StatusChip label={CLIENT_STATUS_LABELS[c.status]} colorClass={CLIENT_STATUS_COLORS[c.status]} />
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

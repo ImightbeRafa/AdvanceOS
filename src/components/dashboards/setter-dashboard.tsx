@@ -49,9 +49,14 @@ export function SetterDashboard({ profile, sets, commissionsTotal }: SetterDashb
 
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold">Sets de hoy</h2>
-        <Link href="/ventas">
-          <Button size="sm" variant="outline">Ver todos</Button>
-        </Link>
+        <div className="flex gap-2">
+          <Link href="/ventas?crear=true">
+            <Button size="sm">Crear set</Button>
+          </Link>
+          <Link href="/ventas">
+            <Button size="sm" variant="outline">Ver todos</Button>
+          </Link>
+        </div>
       </div>
 
       {todaySets.length === 0 ? (

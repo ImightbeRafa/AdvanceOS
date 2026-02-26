@@ -47,16 +47,14 @@ export default async function ClientesPage() {
     return acc
   }, {})
 
-  const { data: tasks } = await supabase
-    .from('tasks')
-    .select('client_id, title, due_date, status')
-    .in('status', ['pendiente', 'en_progreso'])
-    .order('due_date', { ascending: true, nullsFirst: false })
+  const { data: phases } = await supabase
+    .from('advance90_phases')
+    .select('client_id, phase_name, start_date, end_date, order')
+    .order('order')
 
-  const nextTaskByClient = (tasks ?? []).reduce<Record<string, { title: string; due_date: string | null }>>((acc, t) => {
-    if (t.client_id && !acc[t.client_id]) {
-      acc[t.client_id] = { title: t.title, due_date: t.due_date }
-    }
+  const phasesByClient = (phases ?? []).reduce<Record<string, { phase_name: string; start_date: string; end_date: string; order: number }[]>>((acc, p) => {
+    if (!acc[p.client_id]) acc[p.client_id] = []
+    acc[p.client_id].push({ phase_name: p.phase_name, start_date: p.start_date, end_date: p.end_date, order: p.order })
     return acc
   }, {})
 
@@ -72,7 +70,7 @@ export default async function ClientesPage() {
         clients={clients ?? []}
         paymentsByClient={paymentsByClient}
         revenueByDeal={revenueByDeal}
-        nextTaskByClient={nextTaskByClient}
+        phasesByClient={phasesByClient}
         userRole={profile.role}
       />
     </div>

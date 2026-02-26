@@ -39,12 +39,6 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
     .eq('client_id', id)
     .order('item_key')
 
-  const { data: tasks } = await supabase
-    .from('tasks')
-    .select('*, assigned_member:profiles!tasks_assigned_to_fkey(id, full_name)')
-    .eq('client_id', id)
-    .order('due_date')
-
   const { data: phases } = await supabase
     .from('advance90_phases')
     .select('*')
@@ -87,7 +81,6 @@ export default async function ClientDetailPage({ params }: { params: Promise<{ i
     <ClientProfile
       client={client}
       onboarding={onboarding ?? []}
-      tasks={tasks ?? []}
       phases={phases ?? []}
       payments={payments ?? []}
       assets={assets ?? []}

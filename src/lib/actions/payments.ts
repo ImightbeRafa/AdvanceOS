@@ -5,7 +5,7 @@ import { revalidatePath } from 'next/cache'
 import type { PaymentFormData } from '@/lib/schemas'
 import { calculateTilopayFee, calculateCommission } from '@/lib/utils/currency'
 
-export async function registerPayment(setId: string, clientId: string, data: PaymentFormData) {
+export async function registerPayment(setId: string, clientId: string | null, data: PaymentFormData) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autenticado')
@@ -17,6 +17,16 @@ export async function registerPayment(setId: string, clientId: string, data: Pay
     .single()
 
   if (!set) throw new Error('Set no encontrado')
+
+  let resolvedClientId = clientId
+  if (!resolvedClientId) {
+    const { data: client } = await supabase
+      .from('clients')
+      .select('id')
+      .eq('set_id', setId)
+      .single()
+    resolvedClientId = client?.id ?? null
+  }
 
   const installmentMonths = data.payment_method === 'tilopay'
     ? (data.tilopay_installment_months ?? null)
@@ -31,7 +41,7 @@ export async function registerPayment(setId: string, clientId: string, data: Pay
     .from('payments')
     .insert({
       set_id: setId,
-      client_id: clientId,
+      client_id: resolvedClientId,
       amount_gross: data.amount_gross,
       payment_method: data.payment_method,
       tilopay_installment_months: installmentMonths,
@@ -101,7 +111,7 @@ export async function registerPayment(setId: string, clientId: string, data: Pay
     user_id: user.id,
     details: {
       set_id: setId,
-      client_id: clientId,
+      client_id: resolvedClientId,
       amount_gross: data.amount_gross,
       amount_net: netAmount,
       method: data.payment_method,

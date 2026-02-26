@@ -1,4 +1,4 @@
-import type { SetStatus, UserRole, TaskStatus, ClientStatus, PaymentMethod } from '@/types'
+import type { SetStatus, UserRole, ClientStatus, PaymentMethod, FeedbackCategory, FeedbackPriority, FeedbackStatus } from '@/types'
 
 export const SET_STATUS_LABELS: Record<SetStatus, string> = {
   agendado: 'Agendado',
@@ -45,20 +45,6 @@ export const ROLE_COLORS: Record<UserRole, string> = {
   closer: 'bg-chart-2/15 text-chart-2',
   admin: 'bg-chart-4/15 text-chart-4',
   delivery: 'bg-chart-3/15 text-chart-3',
-}
-
-export const TASK_STATUS_LABELS: Record<TaskStatus, string> = {
-  pendiente: 'Pendiente',
-  en_progreso: 'En progreso',
-  bloqueado: 'Bloqueado',
-  listo: 'Listo',
-}
-
-export const TASK_STATUS_COLORS: Record<TaskStatus, string> = {
-  pendiente: 'bg-muted text-muted-foreground',
-  en_progreso: 'bg-info/15 text-info',
-  bloqueado: 'bg-destructive/15 text-destructive',
-  listo: 'bg-success/15 text-success',
 }
 
 export const CLIENT_STATUS_LABELS: Record<ClientStatus, string> = {
@@ -118,28 +104,49 @@ export const ADVANCE90_PHASES = [
   { name: 'Llamada Final', start_day: 90, end_day: 90, order: 7 },
 ] as const
 
-export const ADVANCE90_TASKS_TEMPLATE = [
-  { phase_order: 1, title: 'Crear grupo WhatsApp', description: null },
-  { phase_order: 1, title: 'Enviar bienvenida', description: null },
-  { phase_order: 1, title: 'Enviar formulario', description: null },
-  { phase_order: 1, title: 'Agendar kickoff', description: null },
-  { phase_order: 2, title: 'Escribir 5 guiones', description: null },
-  { phase_order: 2, title: 'Revisión de guiones', description: null },
-  { phase_order: 2, title: 'Luz verde guiones', description: null },
-  { phase_order: 3, title: 'Grabación en locación', description: null },
-  { phase_order: 3, title: 'Edición + ajustes por feedback', description: null },
-  { phase_order: 4, title: 'Campañas activas con videos aprobados', description: null },
-  { phase_order: 5, title: 'Optimización anuncios', description: null },
-  { phase_order: 5, title: 'Optimización perfil', description: null },
-  { phase_order: 5, title: 'Asesoría ventas + medición', description: null },
-  { phase_order: 6, title: 'Guiones R2', description: null },
-  { phase_order: 6, title: 'Grabación R2', description: null },
-  { phase_order: 6, title: 'Edición R2', description: null },
-  { phase_order: 6, title: 'Publicación + pauta R2', description: null },
-  { phase_order: 6, title: 'Optimización final fuerte', description: null },
-  { phase_order: 7, title: 'Llamada final — resultados', description: null },
-  { phase_order: 7, title: 'Aprendizajes y próximos pasos', description: null },
-] as const
+export const FEEDBACK_CATEGORY_LABELS: Record<FeedbackCategory, string> = {
+  bug: 'Bug',
+  sugerencia: 'Sugerencia',
+  pregunta: 'Pregunta',
+  queja: 'Queja',
+  otro: 'Otro',
+}
+
+export const FEEDBACK_CATEGORY_COLORS: Record<FeedbackCategory, string> = {
+  bug: 'bg-destructive/15 text-destructive',
+  sugerencia: 'bg-info/15 text-info',
+  pregunta: 'bg-chart-3/15 text-chart-3',
+  queja: 'bg-warning/15 text-warning',
+  otro: 'bg-muted text-muted-foreground',
+}
+
+export const FEEDBACK_PRIORITY_LABELS: Record<FeedbackPriority, string> = {
+  baja: 'Baja',
+  media: 'Media',
+  alta: 'Alta',
+  urgente: 'Urgente',
+}
+
+export const FEEDBACK_PRIORITY_COLORS: Record<FeedbackPriority, string> = {
+  baja: 'bg-muted text-muted-foreground',
+  media: 'bg-info/15 text-info',
+  alta: 'bg-warning/15 text-warning',
+  urgente: 'bg-destructive/15 text-destructive',
+}
+
+export const FEEDBACK_STATUS_LABELS: Record<FeedbackStatus, string> = {
+  abierto: 'Abierto',
+  en_revision: 'En revisión',
+  resuelto: 'Resuelto',
+  cerrado: 'Cerrado',
+}
+
+export const FEEDBACK_STATUS_COLORS: Record<FeedbackStatus, string> = {
+  abierto: 'bg-info/15 text-info',
+  en_revision: 'bg-warning/15 text-warning',
+  resuelto: 'bg-success/15 text-success',
+  cerrado: 'bg-muted text-muted-foreground',
+}
 
 export const NAV_ITEMS = [
   { label: 'Inicio', href: '/', icon: 'LayoutDashboard', roles: ['admin', 'setter', 'closer', 'delivery'] as UserRole[] },
@@ -148,5 +155,6 @@ export const NAV_ITEMS = [
   { label: 'Equipo', href: '/equipo', icon: 'UserCog', roles: ['admin'] as UserRole[] },
   { label: 'Planilla', href: '/equipo/planilla', icon: 'Wallet', roles: ['admin'] as UserRole[] },
   { label: 'Contabilidad', href: '/contabilidad', icon: 'DollarSign', roles: ['admin'] as UserRole[] },
+  { label: 'Feedback', href: '/feedback', icon: 'MessageSquare', roles: ['admin'] as UserRole[] },
   { label: 'Ajustes', href: '/ajustes', icon: 'Settings', roles: ['admin', 'setter', 'closer', 'delivery'] as UserRole[] },
 ] as const

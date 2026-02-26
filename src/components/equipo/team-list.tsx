@@ -67,13 +67,17 @@ export function TeamList({ members }: TeamListProps) {
       getValue: (m) => m.salary ?? 0,
     },
     {
-      key: 'status',
-      label: 'Estado',
+      key: 'acceso',
+      label: 'Acceso',
       render: (m) => (
-        <StatusChip
-          label={m.active ? 'Activo' : 'Inactivo'}
-          colorClass={m.active ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground'}
-        />
+        <div className="flex items-center gap-1.5">
+          <StatusChip label={ROLE_LABELS[m.role]} colorClass={ROLE_COLORS[m.role]} size="sm" />
+          <StatusChip
+            label={m.active ? 'Activo' : 'Inactivo'}
+            colorClass={m.active ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground'}
+            size="sm"
+          />
+        </div>
       ),
     },
   ]

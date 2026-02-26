@@ -1,12 +1,12 @@
 'use client'
 
-import type { Advance90Phase, Task } from '@/types'
+import type { Advance90Phase } from '@/types'
 import { StatusChip } from '@/components/shared/status-chip'
 import { formatShortDate } from '@/lib/utils/dates'
 import { cn } from '@/lib/utils'
 
 interface Advance90TimelineProps {
-  phases: (Advance90Phase & { tasks?: Task[] })[]
+  phases: Advance90Phase[]
   startDate: string
 }
 
@@ -14,6 +14,13 @@ const PHASE_COLORS: Record<string, string> = {
   pendiente: 'bg-muted',
   en_progreso: 'bg-info',
   completado: 'bg-success',
+}
+
+function computePhaseStatus(phase: Advance90Phase): 'pendiente' | 'en_progreso' | 'completado' {
+  const today = new Date().toISOString().split('T')[0]
+  if (today < phase.start_date) return 'pendiente'
+  if (today > phase.end_date) return 'completado'
+  return 'en_progreso'
 }
 
 export function Advance90Timeline({ phases, startDate }: Advance90TimelineProps) {
@@ -24,13 +31,10 @@ export function Advance90Timeline({ phases, startDate }: Advance90TimelineProps)
 
   return (
     <div className="space-y-4">
-      {/* Week ruler */}
       <div className="relative">
         <div className="flex text-[10px] text-muted-foreground mb-1">
           {weeks.map((w) => (
-            <div key={w} className="flex-1 text-center">
-              S{w + 1}
-            </div>
+            <div key={w} className="flex-1 text-center">S{w + 1}</div>
           ))}
         </div>
         <div className="flex h-px bg-border">
@@ -40,15 +44,11 @@ export function Advance90Timeline({ phases, startDate }: Advance90TimelineProps)
         </div>
       </div>
 
-      {/* Phase bars */}
       <div className="space-y-2">
         {phases.map((phase) => {
           const leftPct = (phase.start_day / totalDays) * 100
           const widthPct = ((phase.end_day - phase.start_day) / totalDays) * 100
-
-          const tasksInPhase = phase.tasks ?? []
-          const completedTasks = tasksInPhase.filter((t) => t.status === 'listo').length
-          const totalTasks = tasksInPhase.length
+          const status = computePhaseStatus(phase)
 
           return (
             <div key={phase.id} className="group">
@@ -56,9 +56,9 @@ export function Advance90Timeline({ phases, startDate }: Advance90TimelineProps)
                 <div
                   className={cn(
                     'absolute inset-y-0 rounded-md flex items-center px-2 transition-all',
-                    PHASE_COLORS[phase.status] ?? 'bg-muted',
-                    phase.status === 'en_progreso' && 'opacity-80',
-                    phase.status === 'completado' && 'opacity-70',
+                    PHASE_COLORS[status] ?? 'bg-muted',
+                    status === 'en_progreso' && 'opacity-80',
+                    status === 'completado' && 'opacity-70',
                   )}
                   style={{ left: `${leftPct}%`, width: `${Math.max(widthPct, 3)}%` }}
                 >
@@ -71,17 +71,12 @@ export function Advance90Timeline({ phases, startDate }: Advance90TimelineProps)
                 <span className="text-[10px] text-muted-foreground">
                   {formatShortDate(phase.start_date)} — {formatShortDate(phase.end_date)}
                 </span>
-                {totalTasks > 0 && (
-                  <span className="text-[10px] text-muted-foreground">
-                    {completedTasks}/{totalTasks} tareas
-                  </span>
-                )}
                 <StatusChip
-                  label={phase.status === 'completado' ? 'Listo' : phase.status === 'en_progreso' ? 'En progreso' : 'Pendiente'}
+                  label={status === 'completado' ? 'Finalizado' : status === 'en_progreso' ? 'En curso' : 'Pendiente'}
                   colorClass={
-                    phase.status === 'completado'
+                    status === 'completado'
                       ? 'bg-success/15 text-success'
-                      : phase.status === 'en_progreso'
+                      : status === 'en_progreso'
                         ? 'bg-info/15 text-info'
                         : 'bg-muted text-muted-foreground'
                   }
@@ -93,20 +88,10 @@ export function Advance90Timeline({ phases, startDate }: Advance90TimelineProps)
         })}
       </div>
 
-      {/* Legend */}
       <div className="flex items-center gap-4 text-[10px] text-muted-foreground pt-2 border-t border-border">
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-2 rounded-sm bg-muted" />
-          <span>Pendiente</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-2 rounded-sm bg-info" />
-          <span>En progreso</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <div className="w-3 h-2 rounded-sm bg-success" />
-          <span>Completado</span>
-        </div>
+        <div className="flex items-center gap-1"><div className="w-3 h-2 rounded-sm bg-muted" /><span>Pendiente</span></div>
+        <div className="flex items-center gap-1"><div className="w-3 h-2 rounded-sm bg-info" /><span>En curso</span></div>
+        <div className="flex items-center gap-1"><div className="w-3 h-2 rounded-sm bg-success" /><span>Finalizado</span></div>
       </div>
     </div>
   )
