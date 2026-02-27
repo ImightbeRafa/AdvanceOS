@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { adSpendSchema, type AdSpendFormData } from '@/lib/schemas'
-import { createAdSpend } from '@/lib/actions/accounting'
+import { createAdSpend, updateAdSpend } from '@/lib/actions/accounting'
+import type { AdSpend } from '@/types'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -16,32 +17,51 @@ import { todayCR } from '@/lib/utils/dates'
 interface AdSpendModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  adSpend?: AdSpend | null
 }
 
-export function AdSpendModal({ open, onOpenChange }: AdSpendModalProps) {
+export function AdSpendModal({ open, onOpenChange, adSpend }: AdSpendModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const isEditing = !!adSpend
 
   const today = todayCR()
 
   const { register, handleSubmit, formState: { errors } } = useForm<AdSpendFormData>({
     resolver: zodResolver(adSpendSchema),
-    defaultValues: {
-      period_start: today,
-      period_end: today,
-      platform: 'Meta Ads',
-    },
+    ...(isEditing
+      ? {
+          values: {
+            period_start: adSpend.period_start,
+            period_end: adSpend.period_end,
+            amount_usd: adSpend.amount_usd,
+            platform: adSpend.platform,
+            notes: adSpend.notes ?? '',
+          },
+        }
+      : {
+          defaultValues: {
+            period_start: today,
+            period_end: today,
+            platform: 'Meta Ads',
+          },
+        }),
   })
 
   async function onSubmit(data: AdSpendFormData) {
     setLoading(true)
     try {
-      await createAdSpend(data)
-      toast.success('Ad spend registrado')
+      if (isEditing) {
+        await updateAdSpend(adSpend.id, data)
+        toast.success('Ad spend actualizado')
+      } else {
+        await createAdSpend(data)
+        toast.success('Ad spend registrado')
+      }
       onOpenChange(false)
       router.refresh()
     } catch {
-      toast.error('Error al registrar ad spend')
+      toast.error(isEditing ? 'Error al actualizar ad spend' : 'Error al registrar ad spend')
     } finally {
       setLoading(false)
     }
@@ -51,7 +71,7 @@ export function AdSpendModal({ open, onOpenChange }: AdSpendModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-surface-2 border-border max-w-md">
         <DialogHeader>
-          <DialogTitle>Registrar Ad Spend</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar Ad Spend' : 'Registrar Ad Spend'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
@@ -87,7 +107,7 @@ export function AdSpendModal({ open, onOpenChange }: AdSpendModalProps) {
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Guardando...' : 'Registrar'}
+              {loading ? 'Guardando...' : isEditing ? 'Guardar' : 'Registrar'}
             </Button>
           </div>
         </form>

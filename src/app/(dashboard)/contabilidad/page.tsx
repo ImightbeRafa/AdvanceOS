@@ -1,7 +1,7 @@
 import { createClient, getAuthProfile } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { AccountingDashboard } from '@/components/contabilidad/accounting-dashboard'
-import { getAccountingSummary, getExpenses, getUnpaidCommissions, getManualTransactions } from '@/lib/actions/accounting'
+import { getAccountingSummary, getExpenses, getAdSpends, getUnpaidCommissions, getManualTransactions } from '@/lib/actions/accounting'
 import { todayCR, monthStartCR } from '@/lib/utils/dates'
 
 export const dynamic = 'force-dynamic'
@@ -15,9 +15,10 @@ export default async function ContabilidadPage() {
   const monthStart = monthStartCR()
   const today = todayCR()
 
-  const [summary, expenses, unpaidCommissions, manualTransactions, { data: exchangeRate }] = await Promise.all([
+  const [summary, expenses, adSpends, unpaidCommissions, manualTransactions, { data: exchangeRate }] = await Promise.all([
     getAccountingSummary(monthStart, today),
     getExpenses(),
+    getAdSpends(),
     getUnpaidCommissions(),
     getManualTransactions(),
     supabase.from('exchange_rates').select('usd_to_crc').order('date', { ascending: false }).limit(1).single(),
@@ -34,6 +35,7 @@ export default async function ContabilidadPage() {
       <AccountingDashboard
         summary={summary}
         expenses={expenses}
+        adSpends={adSpends}
         manualTransactions={manualTransactions}
         unpaidCommissions={unpaidCommissions}
         exchangeRate={exchangeRate?.usd_to_crc ?? 530}

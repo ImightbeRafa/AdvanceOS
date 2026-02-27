@@ -15,16 +15,22 @@ import { formatDateTime } from '@/lib/utils/dates'
 import { formatUSD } from '@/lib/utils/currency'
 import { Separator } from '@/components/ui/separator'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { updateSetStatus } from '@/lib/actions/sets'
 import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
-import { ExternalLink, MessageCircle } from 'lucide-react'
+import { ExternalLink, MessageCircle, Pencil } from 'lucide-react'
 
 const DealModal = dynamic<{ set: Set; open: boolean; onOpenChange: (open: boolean) => void }>(
   () => import('./deal-modal').then(m => ({ default: m.DealModal }))
 )
 const PaymentModal = dynamic<{ set: Set; clientId: string | null; open: boolean; onOpenChange: (open: boolean) => void }>(
   () => import('./payment-modal').then(m => ({ default: m.PaymentModal }))
+)
+const EditSetModal = dynamic<{ set: Set | null; open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[] }>(
+  () => import('./edit-set-modal').then(m => ({ default: m.EditSetModal }))
 )
 
 interface SetDetailDrawerProps {
@@ -38,7 +44,10 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers }: SetDetailD
   const router = useRouter()
   const [showDealModal, setShowDealModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
   const [actionLoading, setActionLoading] = useState(false)
+  const [reagendarDate, setReagendarDate] = useState('')
+  const [reagendarOpen, setReagendarOpen] = useState(false)
 
   if (!set) return null
 
@@ -54,6 +63,25 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers }: SetDetailD
       router.refresh()
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error al actualizar')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  async function handleReagendar() {
+    if (!reagendarDate) {
+      toast.error('Seleccioná la nueva fecha')
+      return
+    }
+    setActionLoading(true)
+    try {
+      await updateSetStatus(set!.id, 'reagendo', undefined, reagendarDate)
+      toast.success('Llamada re-agendada')
+      setReagendarOpen(false)
+      setReagendarDate('')
+      router.refresh()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al reagendar')
     } finally {
       setActionLoading(false)
     }
@@ -218,6 +246,14 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers }: SetDetailD
           <div className="space-y-2">
             <h4 className="text-sm font-medium">Acciones</h4>
             <div className="flex flex-wrap gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => setShowEditModal(true)}
+              >
+                <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                Editar
+              </Button>
               {set.status === 'agendado' && (
                 <Button
                   size="sm"
@@ -230,14 +266,35 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers }: SetDetailD
               )}
               {['agendado', 'precall_enviado', 'reagendo'].includes(set.status) && (
                 <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => quickStatusUpdate('reagendo')}
-                    disabled={actionLoading || set.status === 'reagendo'}
-                  >
-                    Reagendar
-                  </Button>
+                  <Popover open={reagendarOpen} onOpenChange={setReagendarOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={actionLoading}
+                      >
+                        Reagendar
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-72 bg-surface-3 space-y-3" align="start">
+                      <div className="space-y-2">
+                        <Label className="text-sm font-medium">Nueva fecha y hora</Label>
+                        <Input
+                          type="datetime-local"
+                          value={reagendarDate}
+                          onChange={(e) => setReagendarDate(e.target.value)}
+                        />
+                      </div>
+                      <div className="flex justify-end gap-2">
+                        <Button size="sm" variant="outline" onClick={() => setReagendarOpen(false)}>
+                          Cancelar
+                        </Button>
+                        <Button size="sm" onClick={handleReagendar} disabled={actionLoading || !reagendarDate}>
+                          {actionLoading ? 'Guardando...' : 'Confirmar'}
+                        </Button>
+                      </div>
+                    </PopoverContent>
+                  </Popover>
                   <Button
                     size="sm"
                     variant="outline"
@@ -285,6 +342,13 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers }: SetDetailD
           onOpenChange={setShowPaymentModal}
         />
       )}
+
+      <EditSetModal
+        set={set}
+        open={showEditModal}
+        onOpenChange={setShowEditModal}
+        closers={closers}
+      />
     </>
   )
 }

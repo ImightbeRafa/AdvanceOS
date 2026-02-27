@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { expenseSchema, type ExpenseFormData } from '@/lib/schemas'
-import { createExpense } from '@/lib/actions/accounting'
+import { createExpense, updateExpense } from '@/lib/actions/accounting'
+import type { Expense } from '@/types'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -18,29 +19,48 @@ import { todayCR } from '@/lib/utils/dates'
 interface ExpenseModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  expense?: Expense | null
 }
 
-export function ExpenseModal({ open, onOpenChange }: ExpenseModalProps) {
+export function ExpenseModal({ open, onOpenChange, expense }: ExpenseModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
+  const isEditing = !!expense
 
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<ExpenseFormData>({
     resolver: zodResolver(expenseSchema),
-    defaultValues: {
-      date: todayCR(),
-      recurring: false,
-    },
+    ...(isEditing
+      ? {
+          values: {
+            category: expense.category,
+            description: expense.description,
+            amount_usd: expense.amount_usd,
+            date: expense.date,
+            recurring: expense.recurring,
+          },
+        }
+      : {
+          defaultValues: {
+            date: todayCR(),
+            recurring: false,
+          },
+        }),
   })
 
   async function onSubmit(data: ExpenseFormData) {
     setLoading(true)
     try {
-      await createExpense(data)
-      toast.success('Gasto registrado')
+      if (isEditing) {
+        await updateExpense(expense.id, data)
+        toast.success('Gasto actualizado')
+      } else {
+        await createExpense(data)
+        toast.success('Gasto registrado')
+      }
       onOpenChange(false)
       router.refresh()
     } catch {
-      toast.error('Error al registrar gasto')
+      toast.error(isEditing ? 'Error al actualizar gasto' : 'Error al registrar gasto')
     } finally {
       setLoading(false)
     }
@@ -50,12 +70,15 @@ export function ExpenseModal({ open, onOpenChange }: ExpenseModalProps) {
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-surface-2 border-border max-w-md">
         <DialogHeader>
-          <DialogTitle>Registrar gasto</DialogTitle>
+          <DialogTitle>{isEditing ? 'Editar gasto' : 'Registrar gasto'}</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-2">
             <Label>Categoría <span className="text-destructive">*</span></Label>
-            <Select onValueChange={(v) => setValue('category', v as ExpenseFormData['category'])}>
+            <Select
+              defaultValue={expense?.category}
+              onValueChange={(v) => setValue('category', v as ExpenseFormData['category'])}
+            >
               <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
               <SelectContent className="bg-surface-3">
                 <SelectItem value="ads">Ads / Pauta</SelectItem>
@@ -88,6 +111,7 @@ export function ExpenseModal({ open, onOpenChange }: ExpenseModalProps) {
           <div className="flex items-center gap-2">
             <Checkbox
               id="recurring"
+              defaultChecked={expense?.recurring}
               onCheckedChange={(checked) => setValue('recurring', !!checked)}
             />
             <Label htmlFor="recurring" className="text-sm">Gasto recurrente</Label>
@@ -96,7 +120,7 @@ export function ExpenseModal({ open, onOpenChange }: ExpenseModalProps) {
           <div className="flex justify-end gap-2 pt-2">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
             <Button type="submit" disabled={loading}>
-              {loading ? 'Guardando...' : 'Registrar'}
+              {loading ? 'Guardando...' : isEditing ? 'Guardar' : 'Registrar'}
             </Button>
           </div>
         </form>

@@ -69,7 +69,41 @@ export async function createSet(data: CreateSetFormData) {
   return newSet
 }
 
-export async function updateSetStatus(setId: string, newStatus: SetStatus, notes?: string) {
+export async function updateSet(setId: string, data: CreateSetFormData) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const igClean = data.prospect_ig.toLowerCase().replace('@', '')
+
+  const { error } = await supabase
+    .from('sets')
+    .update({
+      prospect_name: data.prospect_name,
+      prospect_whatsapp: data.prospect_whatsapp,
+      prospect_ig: igClean,
+      prospect_web: data.prospect_web || null,
+      closer_id: data.closer_id,
+      scheduled_at: data.scheduled_at,
+      summary: data.summary,
+      service_offered: data.service_offered,
+    })
+    .eq('id', setId)
+
+  if (error) throw new Error(error.message)
+
+  await supabase.from('activity_log').insert({
+    entity_type: 'set',
+    entity_id: setId,
+    action: 'updated',
+    user_id: user.id,
+    details: { prospect_name: data.prospect_name, service: data.service_offered },
+  })
+
+  revalidatePath('/ventas')
+}
+
+export async function updateSetStatus(setId: string, newStatus: SetStatus, notes?: string, scheduledAt?: string) {
   const supabase = await createClient()
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autenticado')
@@ -87,9 +121,12 @@ export async function updateSetStatus(setId: string, newStatus: SetStatus, notes
     throw new Error(`Transición inválida: ${currentSet.status} → ${newStatus}`)
   }
 
+  const updatePayload: Record<string, unknown> = { status: newStatus }
+  if (scheduledAt) updatePayload.scheduled_at = scheduledAt
+
   const { error } = await supabase
     .from('sets')
-    .update({ status: newStatus })
+    .update(updatePayload)
     .eq('id', setId)
 
   if (error) throw new Error(error.message)
@@ -99,7 +136,7 @@ export async function updateSetStatus(setId: string, newStatus: SetStatus, notes
     old_status: currentSet.status,
     new_status: newStatus,
     changed_by: user.id,
-    notes: notes ?? null,
+    notes: scheduledAt ? `Re-agendado para ${scheduledAt}` : (notes ?? null),
   })
 
   await supabase.from('activity_log').insert({
@@ -107,7 +144,11 @@ export async function updateSetStatus(setId: string, newStatus: SetStatus, notes
     entity_id: setId,
     action: 'status_changed',
     user_id: user.id,
-    details: { old_status: currentSet.status, new_status: newStatus },
+    details: {
+      old_status: currentSet.status,
+      new_status: newStatus,
+      ...(scheduledAt ? { scheduled_at: scheduledAt } : {}),
+    },
   })
 
   revalidatePath('/ventas')

@@ -157,11 +157,74 @@ export async function createExpense(data: ExpenseFormData) {
   revalidatePath('/contabilidad')
 }
 
+export async function updateExpense(id: string, data: ExpenseFormData) {
+  const { supabase, user } = await requireAdmin()
+
+  const { error } = await supabase
+    .from('expenses')
+    .update({
+      category: data.category,
+      description: data.description,
+      amount_usd: data.amount_usd,
+      date: data.date,
+      recurring: data.recurring,
+    })
+    .eq('id', id)
+
+  if (error) throw new Error(error.message)
+
+  await supabase.from('activity_log').insert({
+    entity_type: 'expense',
+    entity_id: id,
+    action: 'updated',
+    user_id: user.id,
+    details: data,
+  })
+
+  revalidatePath('/contabilidad')
+}
+
 export async function createAdSpend(data: AdSpendFormData) {
   const { supabase } = await requireAdmin()
   const { error } = await supabase.from('ad_spend').insert(data)
   if (error) throw new Error(error.message)
   revalidatePath('/contabilidad')
+}
+
+export async function updateAdSpend(id: string, data: AdSpendFormData) {
+  const { supabase, user } = await requireAdmin()
+
+  const { error } = await supabase
+    .from('ad_spend')
+    .update({
+      period_start: data.period_start,
+      period_end: data.period_end,
+      amount_usd: data.amount_usd,
+      platform: data.platform,
+      notes: data.notes ?? null,
+    })
+    .eq('id', id)
+
+  if (error) throw new Error(error.message)
+
+  await supabase.from('activity_log').insert({
+    entity_type: 'ad_spend',
+    entity_id: id,
+    action: 'updated',
+    user_id: user.id,
+    details: data,
+  })
+
+  revalidatePath('/contabilidad')
+}
+
+export async function getAdSpends() {
+  const { supabase } = await requireAdmin()
+  const { data } = await supabase
+    .from('ad_spend')
+    .select('*')
+    .order('period_start', { ascending: false })
+  return data ?? []
 }
 
 export async function getExpenses() {
