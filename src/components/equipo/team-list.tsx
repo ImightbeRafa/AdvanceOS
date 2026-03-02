@@ -4,16 +4,20 @@ import { useState } from 'react'
 import type { Profile, UserRole } from '@/types'
 import { DataTable, type Column } from '@/components/shared/data-table'
 import { StatusChip } from '@/components/shared/status-chip'
+import { ConfirmModal } from '@/components/shared/confirm-modal'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/constants'
 import { formatUSD } from '@/lib/utils/currency'
+import { resendInvite, deleteUser } from '@/lib/actions/invite'
 import { Button } from '@/components/ui/button'
-import { MoreHorizontal, Eye, Pencil, UserPlus } from 'lucide-react'
+import { MoreHorizontal, Eye, Pencil, UserPlus, MailPlus, Trash2 } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
 
 const TeamMemberDrawer = dynamic<{ member: Profile | null; open: boolean; onOpenChange: (open: boolean) => void; userRole?: UserRole }>(
@@ -34,6 +38,35 @@ export function TeamList({ members }: TeamListProps) {
   const [selectedMember, setSelectedMember] = useState<Profile | null>(null)
   const [editingMember, setEditingMember] = useState<Profile | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [deletingMember, setDeletingMember] = useState<Profile | null>(null)
+  const [actionLoading, setActionLoading] = useState(false)
+
+  async function handleResendInvite(member: Profile) {
+    if (!member.email) return
+    setActionLoading(true)
+    try {
+      await resendInvite(member.id, member.email)
+      toast.success(`Invitación reenviada a ${member.email}`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al reenviar invitación')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  async function handleDeleteUser() {
+    if (!deletingMember) return
+    setActionLoading(true)
+    try {
+      await deleteUser(deletingMember.id)
+      toast.success(`${deletingMember.full_name} eliminado`)
+      setDeletingMember(null)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar usuario')
+    } finally {
+      setActionLoading(false)
+    }
+  }
 
   const columns: Column<Profile>[] = [
     {
@@ -123,6 +156,23 @@ export function TeamList({ members }: TeamListProps) {
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
+              {member.email && !member.whatsapp && (
+                <DropdownMenuItem
+                  onClick={() => handleResendInvite(member)}
+                  disabled={actionLoading}
+                >
+                  <MailPlus className="mr-2 h-4 w-4" />
+                  Reenviar invitación
+                </DropdownMenuItem>
+              )}
+              <DropdownMenuSeparator />
+              <DropdownMenuItem
+                onClick={() => setDeletingMember(member)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar usuario
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -144,6 +194,17 @@ export function TeamList({ members }: TeamListProps) {
       <InviteMemberModal
         open={inviteOpen}
         onOpenChange={setInviteOpen}
+      />
+
+      <ConfirmModal
+        open={!!deletingMember}
+        onOpenChange={(open) => !open && setDeletingMember(null)}
+        title="Eliminar usuario"
+        description={`¿Estás seguro de que querés eliminar a ${deletingMember?.full_name}? Esta acción no se puede deshacer.`}
+        confirmLabel="Eliminar"
+        variant="destructive"
+        onConfirm={handleDeleteUser}
+        loading={actionLoading}
       />
     </>
   )
