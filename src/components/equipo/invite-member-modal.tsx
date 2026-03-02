@@ -21,9 +21,10 @@ import { toast } from 'sonner'
 interface InviteMemberModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
+  onLinkGenerated?: (link: string) => void
 }
 
-export function InviteMemberModal({ open, onOpenChange }: InviteMemberModalProps) {
+export function InviteMemberModal({ open, onOpenChange, onLinkGenerated }: InviteMemberModalProps) {
   const [loading, setLoading] = useState(false)
 
   const { register, handleSubmit, setValue, reset, formState: { errors } } = useForm<InviteFormData>({
@@ -36,8 +37,15 @@ export function InviteMemberModal({ open, onOpenChange }: InviteMemberModalProps
   async function onSubmit(data: InviteFormData) {
     setLoading(true)
     try {
-      await inviteUser(data)
-      toast.success(`Invitación enviada a ${data.email}`)
+      const result = await inviteUser(data)
+
+      if (result.link) {
+        toast.success('Usuario ya existía. Se generó un enlace de acceso.')
+        onLinkGenerated?.(result.link)
+      } else {
+        toast.success(`Invitación enviada a ${data.email}`)
+      }
+
       reset()
       onOpenChange(false)
     } catch (err) {

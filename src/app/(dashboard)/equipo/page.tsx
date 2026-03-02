@@ -13,6 +13,7 @@ export default async function EquipoPage() {
   const { data: members } = await supabase
     .from('profiles')
     .select('*')
+    .order('active', { ascending: false })
     .order('full_name')
 
   return (

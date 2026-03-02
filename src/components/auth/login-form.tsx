@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
@@ -10,13 +10,50 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Zap } from 'lucide-react'
+import { Zap, Loader2 } from 'lucide-react'
 
 export default function LoginForm() {
   const router = useRouter()
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
+  const [processingToken, setProcessingToken] = useState(false)
   const supabase = createClient()
+
+  useEffect(() => {
+    const hash = window.location.hash
+    if (hash && hash.includes('access_token')) {
+      setProcessingToken(true)
+
+      supabase.auth.onAuthStateChange((event, session) => {
+        if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION')) {
+          checkProfileAndRedirect(session.user.id)
+        }
+      })
+
+      const timeout = setTimeout(() => {
+        setProcessingToken(false)
+        setError('No se pudo procesar la invitación. Pedí un reenvío.')
+      }, 10000)
+
+      return () => clearTimeout(timeout)
+    }
+  }, [])
+
+  async function checkProfileAndRedirect(userId: string) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('whatsapp')
+      .eq('id', userId)
+      .single()
+
+    const needsSetup = !profile?.whatsapp
+    if (needsSetup) {
+      router.push('/setup')
+    } else {
+      router.push('/')
+    }
+    router.refresh()
+  }
 
   const { register, handleSubmit, formState: { errors } } = useForm<LoginFormData>({
     resolver: zodResolver(loginSchema),
@@ -39,6 +76,23 @@ export default function LoginForm() {
 
     router.push('/')
     router.refresh()
+  }
+
+  if (processingToken) {
+    return (
+      <Card className="w-full max-w-md bg-surface-1 border-border">
+        <CardHeader className="text-center">
+          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-primary/10">
+            <Zap className="h-6 w-6 text-primary" />
+          </div>
+          <CardTitle className="text-2xl font-bold">AdvanceOS</CardTitle>
+          <CardDescription>Procesando invitación...</CardDescription>
+        </CardHeader>
+        <CardContent className="flex justify-center py-8">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </CardContent>
+      </Card>
+    )
   }
 
   return (

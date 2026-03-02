@@ -7,9 +7,12 @@ import { StatusChip } from '@/components/shared/status-chip'
 import { ConfirmModal } from '@/components/shared/confirm-modal'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/constants'
 import { formatUSD } from '@/lib/utils/currency'
-import { resendInvite, deleteUser } from '@/lib/actions/invite'
+import { resendInvite, deactivateUser, reactivateUser } from '@/lib/actions/invite'
 import { Button } from '@/components/ui/button'
-import { MoreHorizontal, Eye, Pencil, UserPlus, MailPlus, Trash2 } from 'lucide-react'
+import {
+  MoreHorizontal, Eye, Pencil, UserPlus, MailPlus,
+  UserX, UserCheck, Copy, Check,
+} from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -17,6 +20,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog'
+import { Input } from '@/components/ui/input'
 import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
 
@@ -26,7 +37,7 @@ const TeamMemberDrawer = dynamic<{ member: Profile | null; open: boolean; onOpen
 const EditTeamMemberModal = dynamic<{ member: Profile | null; open: boolean; onOpenChange: (open: boolean) => void }>(
   () => import('./edit-team-member-modal').then(m => ({ default: m.EditTeamMemberModal }))
 )
-const InviteMemberModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void }>(
+const InviteMemberModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void; onLinkGenerated?: (link: string) => void }>(
   () => import('./invite-member-modal').then(m => ({ default: m.InviteMemberModal }))
 )
 
@@ -38,34 +49,60 @@ export function TeamList({ members }: TeamListProps) {
   const [selectedMember, setSelectedMember] = useState<Profile | null>(null)
   const [editingMember, setEditingMember] = useState<Profile | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
-  const [deletingMember, setDeletingMember] = useState<Profile | null>(null)
+  const [deactivatingMember, setDeactivatingMember] = useState<Profile | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
+  const [magicLink, setMagicLink] = useState<string | null>(null)
+  const [copied, setCopied] = useState(false)
 
   async function handleResendInvite(member: Profile) {
     if (!member.email) return
     setActionLoading(true)
     try {
-      await resendInvite(member.id, member.email)
-      toast.success(`Invitación reenviada a ${member.email}`)
+      const { link } = await resendInvite(member.id, member.email)
+      setMagicLink(link)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al reenviar invitación')
+      toast.error(err instanceof Error ? err.message : 'Error al generar enlace')
     } finally {
       setActionLoading(false)
     }
   }
 
-  async function handleDeleteUser() {
-    if (!deletingMember) return
+  async function handleDeactivate() {
+    if (!deactivatingMember) return
     setActionLoading(true)
     try {
-      await deleteUser(deletingMember.id)
-      toast.success(`${deletingMember.full_name} eliminado`)
-      setDeletingMember(null)
+      await deactivateUser(deactivatingMember.id)
+      toast.success(`${deactivatingMember.full_name} desactivado`)
+      setDeactivatingMember(null)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Error al eliminar usuario')
+      toast.error(err instanceof Error ? err.message : 'Error al desactivar usuario')
     } finally {
       setActionLoading(false)
     }
+  }
+
+  async function handleReactivate(member: Profile) {
+    setActionLoading(true)
+    try {
+      await reactivateUser(member.id)
+      toast.success(`${member.full_name} reactivado`)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al reactivar usuario')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  async function copyLink() {
+    if (!magicLink) return
+    await navigator.clipboard.writeText(magicLink)
+    setCopied(true)
+    toast.success('Enlace copiado')
+    setTimeout(() => setCopied(false), 2000)
+  }
+
+  function handleLinkGenerated(link: string) {
+    setMagicLink(link)
   }
 
   const columns: Column<Profile>[] = [
@@ -73,7 +110,11 @@ export function TeamList({ members }: TeamListProps) {
       key: 'name',
       label: 'Nombre',
       sortable: true,
-      render: (m) => <span className="font-medium">{m.full_name}</span>,
+      render: (m) => (
+        <span className={`font-medium ${!m.active ? 'text-muted-foreground line-through' : ''}`}>
+          {m.full_name}
+        </span>
+      ),
       getValue: (m) => m.full_name,
     },
     {
@@ -86,7 +127,7 @@ export function TeamList({ members }: TeamListProps) {
     {
       key: 'whatsapp',
       label: 'WhatsApp',
-      render: (m) => (
+      render: (m) => m.whatsapp ? (
         <a
           href={`https://wa.me/${m.whatsapp.replace(/\D/g, '')}`}
           target="_blank"
@@ -96,6 +137,8 @@ export function TeamList({ members }: TeamListProps) {
         >
           {m.whatsapp}
         </a>
+      ) : (
+        <span className="text-muted-foreground text-sm">Pendiente</span>
       ),
     },
     {
@@ -111,17 +154,16 @@ export function TeamList({ members }: TeamListProps) {
     },
     {
       key: 'acceso',
-      label: 'Acceso',
-      render: (m) => (
-        <div className="flex items-center gap-1.5">
-          <StatusChip label={ROLE_LABELS[m.role]} colorClass={ROLE_COLORS[m.role]} size="sm" />
-          <StatusChip
-            label={m.active ? 'Activo' : 'Inactivo'}
-            colorClass={m.active ? 'bg-success/15 text-success' : 'bg-muted text-muted-foreground'}
-            size="sm"
-          />
-        </div>
-      ),
+      label: 'Estado',
+      render: (m) => {
+        if (!m.active) {
+          return <StatusChip label="Desactivado" colorClass="bg-destructive/15 text-destructive" size="sm" />
+        }
+        if (!m.whatsapp) {
+          return <StatusChip label="Invitado" colorClass="bg-warning/15 text-warning" size="sm" />
+        }
+        return <StatusChip label="Activo" colorClass="bg-success/15 text-success" size="sm" />
+      },
     },
   ]
 
@@ -156,7 +198,7 @@ export function TeamList({ members }: TeamListProps) {
                 <Pencil className="mr-2 h-4 w-4" />
                 Editar
               </DropdownMenuItem>
-              {member.email && !member.whatsapp && (
+              {member.email && !member.whatsapp && member.active && (
                 <DropdownMenuItem
                   onClick={() => handleResendInvite(member)}
                   disabled={actionLoading}
@@ -166,13 +208,23 @@ export function TeamList({ members }: TeamListProps) {
                 </DropdownMenuItem>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem
-                onClick={() => setDeletingMember(member)}
-                className="text-destructive focus:text-destructive"
-              >
-                <Trash2 className="mr-2 h-4 w-4" />
-                Eliminar usuario
-              </DropdownMenuItem>
+              {member.active ? (
+                <DropdownMenuItem
+                  onClick={() => setDeactivatingMember(member)}
+                  className="text-destructive focus:text-destructive"
+                >
+                  <UserX className="mr-2 h-4 w-4" />
+                  Desactivar usuario
+                </DropdownMenuItem>
+              ) : (
+                <DropdownMenuItem
+                  onClick={() => handleReactivate(member)}
+                  disabled={actionLoading}
+                >
+                  <UserCheck className="mr-2 h-4 w-4" />
+                  Reactivar usuario
+                </DropdownMenuItem>
+              )}
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -194,18 +246,36 @@ export function TeamList({ members }: TeamListProps) {
       <InviteMemberModal
         open={inviteOpen}
         onOpenChange={setInviteOpen}
+        onLinkGenerated={handleLinkGenerated}
       />
 
       <ConfirmModal
-        open={!!deletingMember}
-        onOpenChange={(open) => !open && setDeletingMember(null)}
-        title="Eliminar usuario"
-        description={`¿Estás seguro de que querés eliminar a ${deletingMember?.full_name}? Esta acción no se puede deshacer.`}
-        confirmLabel="Eliminar"
+        open={!!deactivatingMember}
+        onOpenChange={(open) => !open && setDeactivatingMember(null)}
+        title="Desactivar usuario"
+        description={`¿Estás seguro de que querés desactivar a ${deactivatingMember?.full_name}? El usuario no podrá acceder al sistema, pero sus datos (ventas, comisiones, pagos) se mantienen intactos.`}
+        confirmLabel="Desactivar"
         variant="destructive"
-        onConfirm={handleDeleteUser}
+        onConfirm={handleDeactivate}
         loading={actionLoading}
       />
+
+      <Dialog open={!!magicLink} onOpenChange={(open) => { if (!open) { setMagicLink(null); setCopied(false) } }}>
+        <DialogContent className="bg-surface-2 border-border max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Enlace de invitación</DialogTitle>
+            <DialogDescription>
+              Copiá este enlace y compartilo con el miembro del equipo por WhatsApp u otro medio.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2">
+            <Input value={magicLink ?? ''} readOnly className="text-xs font-mono" />
+            <Button onClick={copyLink} variant="outline" size="icon" className="shrink-0">
+              {copied ? <Check className="h-4 w-4 text-success" /> : <Copy className="h-4 w-4" />}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </>
   )
 }
