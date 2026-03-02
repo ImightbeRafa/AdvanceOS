@@ -7,11 +7,11 @@ import { StatusChip } from '@/components/shared/status-chip'
 import { ConfirmModal } from '@/components/shared/confirm-modal'
 import { ROLE_LABELS, ROLE_COLORS } from '@/lib/constants'
 import { formatUSD } from '@/lib/utils/currency'
-import { resendInvite, deactivateUser, reactivateUser } from '@/lib/actions/invite'
+import { resendInvite, deactivateUser, reactivateUser, deleteUser } from '@/lib/actions/invite'
 import { Button } from '@/components/ui/button'
 import {
   MoreHorizontal, Eye, Pencil, UserPlus, MailPlus,
-  UserX, UserCheck, Copy, Check,
+  UserX, UserCheck, Copy, Check, Trash2,
 } from 'lucide-react'
 import {
   DropdownMenu,
@@ -50,6 +50,7 @@ export function TeamList({ members }: TeamListProps) {
   const [editingMember, setEditingMember] = useState<Profile | null>(null)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [deactivatingMember, setDeactivatingMember] = useState<Profile | null>(null)
+  const [deletingMember, setDeletingMember] = useState<Profile | null>(null)
   const [actionLoading, setActionLoading] = useState(false)
   const [magicLink, setMagicLink] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -76,6 +77,20 @@ export function TeamList({ members }: TeamListProps) {
       setDeactivatingMember(null)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Error al desactivar usuario')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  async function handleDelete() {
+    if (!deletingMember) return
+    setActionLoading(true)
+    try {
+      await deleteUser(deletingMember.id)
+      toast.success(`${deletingMember.full_name} eliminado permanentemente`)
+      setDeletingMember(null)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Error al eliminar usuario')
     } finally {
       setActionLoading(false)
     }
@@ -225,6 +240,13 @@ export function TeamList({ members }: TeamListProps) {
                   Reactivar usuario
                 </DropdownMenuItem>
               )}
+              <DropdownMenuItem
+                onClick={() => setDeletingMember(member)}
+                className="text-destructive focus:text-destructive"
+              >
+                <Trash2 className="mr-2 h-4 w-4" />
+                Eliminar permanente
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         )}
@@ -257,6 +279,17 @@ export function TeamList({ members }: TeamListProps) {
         confirmLabel="Desactivar"
         variant="destructive"
         onConfirm={handleDeactivate}
+        loading={actionLoading}
+      />
+
+      <ConfirmModal
+        open={!!deletingMember}
+        onOpenChange={(open) => !open && setDeletingMember(null)}
+        title="Eliminar usuario permanentemente"
+        description={`⚠️ ATENCIÓN: Esto eliminará a ${deletingMember?.full_name} y TODOS sus datos asociados de forma permanente. Esta acción NO se puede deshacer. Usá esto solo para usuarios de prueba.`}
+        confirmLabel="Eliminar permanente"
+        variant="destructive"
+        onConfirm={handleDelete}
         loading={actionLoading}
       />
 

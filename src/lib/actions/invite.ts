@@ -29,7 +29,7 @@ export async function inviteUser(data: InviteFormData): Promise<{ link?: string 
 
   const inviteOptions = {
     data: { full_name: data.full_name, role: data.role },
-    redirectTo: `${origin}/auth/callback`,
+    redirectTo: `${origin}/auth/confirm`,
   }
 
   const result = await serviceClient.auth.admin.inviteUserByEmail(
@@ -66,7 +66,7 @@ export async function inviteUser(data: InviteFormData): Promise<{ link?: string 
       const { data: linkData, error: linkError } = await serviceClient.auth.admin.generateLink({
         type: 'magiclink',
         email: data.email,
-        options: { redirectTo: `${origin}/auth/callback` },
+        options: { redirectTo: `${origin}/login` },
       })
 
       if (linkError) throw new Error(linkError.message)
@@ -106,7 +106,7 @@ export async function resendInvite(memberId: string, email: string): Promise<{ l
   const { data: linkData, error: linkError } = await serviceClient.auth.admin.generateLink({
     type: 'magiclink',
     email,
-    options: { redirectTo: `${origin}/auth/callback` },
+    options: { redirectTo: `${origin}/login` },
   })
 
   if (linkError) throw new Error(linkError.message)
@@ -153,6 +153,51 @@ export async function deactivateUser(memberId: string) {
     user_id: user.id,
     details: { email: member?.email, full_name: member?.full_name },
   })
+
+  revalidatePath('/equipo')
+}
+
+export async function deleteUser(memberId: string) {
+  const { user } = await requireAdmin()
+  if (memberId === user.id) throw new Error('No podés eliminarte a vos mismo')
+
+  const serviceClient = await createServiceClient()
+
+  const { data: member } = await serviceClient
+    .from('profiles')
+    .select('email, full_name')
+    .eq('id', memberId)
+    .single()
+
+  // Nullify nullable FK references
+  await serviceClient.from('set_status_history').update({ changed_by: null }).eq('changed_by', memberId)
+  await serviceClient.from('clients').update({ assigned_to: null }).eq('assigned_to', memberId)
+  await serviceClient.from('advance90_checklist_items').update({ completed_by: null }).eq('completed_by', memberId)
+  await serviceClient.from('advance90_deliverables').update({ assigned_to: null }).eq('assigned_to', memberId)
+  await serviceClient.from('advance90_resources').update({ uploaded_by: null }).eq('uploaded_by', memberId)
+  await serviceClient.from('feedback_tickets').update({ assigned_to: null }).eq('assigned_to', memberId)
+  await serviceClient.from('activity_log').update({ user_id: null }).eq('user_id', memberId)
+
+  // Delete rows where user FK is NOT NULL (can't nullify)
+  await serviceClient.from('feedback_replies').delete().eq('user_id', memberId)
+  await serviceClient.from('feedback_tickets').delete().eq('user_id', memberId)
+  await serviceClient.from('commissions').delete().eq('team_member_id', memberId)
+  await serviceClient.from('salary_payments').delete().eq('team_member_id', memberId)
+  await serviceClient.from('sets').delete().or(`setter_id.eq.${memberId},closer_id.eq.${memberId}`)
+  await serviceClient.from('notifications').delete().eq('user_id', memberId)
+
+  await serviceClient.from('activity_log').insert({
+    entity_type: 'profile',
+    entity_id: memberId,
+    action: 'deleted',
+    user_id: user.id,
+    details: { email: member?.email, full_name: member?.full_name },
+  })
+
+  await serviceClient.from('profiles').delete().eq('id', memberId)
+
+  const { error: authError } = await serviceClient.auth.admin.deleteUser(memberId)
+  if (authError) throw new Error(authError.message)
 
   revalidatePath('/equipo')
 }

@@ -21,22 +21,32 @@ export default function LoginForm() {
 
   useEffect(() => {
     const hash = window.location.hash
-    if (hash && hash.includes('access_token')) {
-      setProcessingToken(true)
+    if (!hash || !hash.includes('access_token')) return
 
-      supabase.auth.onAuthStateChange((event, session) => {
-        if (session && (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'INITIAL_SESSION')) {
-          checkProfileAndRedirect(session.user.id)
-        }
-      })
+    setProcessingToken(true)
 
-      const timeout = setTimeout(() => {
-        setProcessingToken(false)
-        setError('No se pudo procesar la invitación. Pedí un reenvío.')
-      }, 10000)
+    const params = new URLSearchParams(hash.substring(1))
+    const accessToken = params.get('access_token')
+    const refreshToken = params.get('refresh_token')
 
-      return () => clearTimeout(timeout)
+    if (!accessToken || !refreshToken) {
+      setProcessingToken(false)
+      setError('Enlace de invitación inválido.')
+      return
     }
+
+    window.history.replaceState(null, '', window.location.pathname)
+
+    supabase.auth
+      .setSession({ access_token: accessToken, refresh_token: refreshToken })
+      .then(({ data, error: sessionError }) => {
+        if (sessionError || !data.session) {
+          setProcessingToken(false)
+          setError('No se pudo procesar la invitación. Pedí un reenvío.')
+          return
+        }
+        checkProfileAndRedirect(data.session.user.id)
+      })
   }, [])
 
   async function checkProfileAndRedirect(userId: string) {
