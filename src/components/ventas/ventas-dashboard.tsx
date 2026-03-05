@@ -19,7 +19,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs'
-import { Plus, MoreHorizontal, Eye, CalendarRange, Bookmark, X, ExternalLink, MessageCircle } from 'lucide-react'
+import { Plus, MoreHorizontal, Eye, CalendarRange, Bookmark, X, ExternalLink, MessageCircle, Trash2 } from 'lucide-react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -39,6 +39,8 @@ const PaymentModal = dynamic<{ set: Set; clientId: string | null; open: boolean;
   () => import('./payment-modal').then(m => ({ default: m.PaymentModal }))
 )
 import { useSavedFilters } from '@/lib/hooks/use-saved-filters'
+import { deleteSet } from '@/lib/actions/sets'
+import { toast } from 'sonner'
 
 export interface PaymentRecord {
   set_id: string
@@ -97,6 +99,17 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
     setServiceFilter(filters.serviceFilter ?? 'all')
     setDateFrom(filters.dateFrom ?? '')
     setDateTo(filters.dateTo ?? '')
+  }
+
+  async function handleDeleteSet(s: Set) {
+    if (!confirm(`¿Eliminar el set de "${s.prospect_name}"? Esto eliminará todos los datos relacionados. Esta acción no se puede deshacer.`)) return
+    try {
+      await deleteSet(s.id)
+      toast.success('Set eliminado correctamente')
+      router.refresh()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al eliminar')
+    }
   }
 
   // --- KPI calculations (current month, using scheduled_at for sets-based metrics) ---
@@ -410,6 +423,14 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
                     <DropdownMenuItem onClick={() => setPaymentSet(s)}>
                       <Plus className="mr-2 h-4 w-4" />Registrar pago
                     </DropdownMenuItem>
+                  )}
+                  {userRole === 'admin' && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => handleDeleteSet(s)}>
+                        <Trash2 className="mr-2 h-4 w-4" />Eliminar set
+                      </DropdownMenuItem>
+                    </>
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>

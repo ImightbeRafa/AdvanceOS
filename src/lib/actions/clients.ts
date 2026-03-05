@@ -316,3 +316,48 @@ export async function addClientNote(clientId: string, noteType: string, content:
 
   revalidatePath(`/clientes/${clientId}`)
 }
+
+export async function deleteClient(clientId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'admin') throw new Error('Solo admin puede eliminar clientes')
+
+  const { data: client } = await supabase
+    .from('clients')
+    .select('business_name, set_id')
+    .eq('id', clientId)
+    .single()
+
+  if (!client) throw new Error('Cliente no encontrado')
+
+  // Delete payments linked to client (CASCADE handles commissions)
+  await supabase.from('payments').delete().eq('client_id', clientId)
+
+  // Delete the client (CASCADE handles onboarding, forms, phases, assets)
+  const { error } = await supabase
+    .from('clients')
+    .delete()
+    .eq('id', clientId)
+
+  if (error) throw new Error(error.message)
+
+  await supabase.from('activity_log').insert({
+    entity_type: 'client',
+    entity_id: clientId,
+    action: 'deleted',
+    user_id: user.id,
+    details: { business_name: client.business_name },
+  })
+
+  revalidatePath('/clientes')
+  revalidatePath('/ventas')
+  revalidatePath('/contabilidad')
+}

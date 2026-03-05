@@ -383,3 +383,51 @@ export async function createDealDisqualified(setId: string, data: DisqualifyForm
 
   revalidatePath('/ventas')
 }
+
+export async function deleteSet(setId: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('No autenticado')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('role')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.role !== 'admin') throw new Error('Solo admin puede eliminar sets')
+
+  const { data: set } = await supabase
+    .from('sets')
+    .select('prospect_name')
+    .eq('id', setId)
+    .single()
+
+  if (!set) throw new Error('Set no encontrado')
+
+  // Delete related payments (CASCADE will handle commissions)
+  await supabase.from('payments').delete().eq('set_id', setId)
+
+  // Delete related clients (CASCADE will handle onboarding, forms, phases, assets)
+  await supabase.from('clients').delete().eq('set_id', setId)
+
+  // Delete the set (CASCADE will handle deals, set_status_history)
+  const { error } = await supabase
+    .from('sets')
+    .delete()
+    .eq('id', setId)
+
+  if (error) throw new Error(error.message)
+
+  await supabase.from('activity_log').insert({
+    entity_type: 'set',
+    entity_id: setId,
+    action: 'deleted',
+    user_id: user.id,
+    details: { prospect_name: set.prospect_name },
+  })
+
+  revalidatePath('/ventas')
+  revalidatePath('/clientes')
+  revalidatePath('/contabilidad')
+}

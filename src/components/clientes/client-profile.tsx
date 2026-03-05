@@ -13,10 +13,10 @@ import { formatUSD } from '@/lib/utils/currency'
 import { Button } from '@/components/ui/button'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { toggleOnboardingItem, updateClientStatus, addClientNote, createClientAsset } from '@/lib/actions/clients'
+import { toggleOnboardingItem, updateClientStatus, addClientNote, createClientAsset, deleteClient } from '@/lib/actions/clients'
 import { toast } from 'sonner'
 import { Textarea } from '@/components/ui/textarea'
-import { ArrowLeft, ExternalLink, MessageCircle, PlusCircle, Plus } from 'lucide-react'
+import { ArrowLeft, ExternalLink, MessageCircle, PlusCircle, Plus, Trash2 } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Advance90Timeline } from './advance90-timeline'
@@ -73,6 +73,17 @@ export function ClientProfile({
     }
   }
 
+  async function handleDeleteClient() {
+    if (!confirm(`¿Estás seguro de eliminar al cliente "${client.business_name}"? Esto eliminará todos los datos relacionados (onboarding, formularios, fases, assets, pagos). Esta acción no se puede deshacer.`)) return
+    try {
+      await deleteClient(client.id)
+      toast.success('Cliente eliminado correctamente')
+      router.push('/clientes')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al eliminar')
+    }
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-3">
@@ -97,6 +108,12 @@ export function ClientProfile({
             <SelectItem value="completado">Completado</SelectItem>
           </SelectContent>
         </Select>
+        {userRole === 'admin' && (
+          <Button variant="destructive" size="sm" onClick={handleDeleteClient}>
+            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+            Eliminar
+          </Button>
+        )}
       </div>
 
       <Tabs defaultValue="overview">

@@ -18,10 +18,10 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { updateSetStatus } from '@/lib/actions/sets'
+import { updateSetStatus, deleteSet } from '@/lib/actions/sets'
 import { toast } from 'sonner'
 import dynamic from 'next/dynamic'
-import { ExternalLink, MessageCircle, Pencil } from 'lucide-react'
+import { ExternalLink, MessageCircle, Pencil, Trash2 } from 'lucide-react'
 
 const DealModal = dynamic<{ set: Set; open: boolean; onOpenChange: (open: boolean) => void }>(
   () => import('./deal-modal').then(m => ({ default: m.DealModal }))
@@ -84,6 +84,21 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers, paymentsBySe
       router.refresh()
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error al reagendar')
+    } finally {
+      setActionLoading(false)
+    }
+  }
+
+  async function handleDeleteSet() {
+    if (!confirm(`¿Estás seguro de eliminar el set de "${set!.prospect_name}"? Esto eliminará todos los datos relacionados (deals, pagos, clientes, etc). Esta acción no se puede deshacer.`)) return
+    setActionLoading(true)
+    try {
+      await deleteSet(set!.id)
+      toast.success('Set eliminado correctamente')
+      onOpenChange(false)
+      router.refresh()
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al eliminar')
     } finally {
       setActionLoading(false)
     }
@@ -323,6 +338,17 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers, paymentsBySe
                   onClick={() => setShowPaymentModal(true)}
                 >
                   Registrar pago
+                </Button>
+              )}
+              {userRole === 'admin' && (
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  onClick={handleDeleteSet}
+                  disabled={actionLoading}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+                  Eliminar set
                 </Button>
               )}
             </div>
