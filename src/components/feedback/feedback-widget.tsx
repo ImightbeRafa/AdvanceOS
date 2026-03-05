@@ -45,8 +45,8 @@ export function FeedbackWidget() {
       snapshotRef.current = null
       setOpen(false)
       router.refresh()
-    } catch {
-      toast.error('Error al enviar ticket')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al enviar ticket')
     } finally {
       setLoading(false)
     }

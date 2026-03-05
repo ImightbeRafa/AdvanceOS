@@ -54,8 +54,8 @@ export function EditTeamMemberModal({ member, open, onOpenChange }: EditTeamMemb
       toast.success('Miembro actualizado')
       onOpenChange(false)
       router.refresh()
-    } catch {
-      toast.error('Error al actualizar miembro')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al actualizar miembro')
     } finally {
       setLoading(false)
     }

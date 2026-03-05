@@ -60,8 +60,8 @@ export function AdSpendModal({ open, onOpenChange, adSpend }: AdSpendModalProps)
       }
       onOpenChange(false)
       router.refresh()
-    } catch {
-      toast.error(isEditing ? 'Error al actualizar ad spend' : 'Error al registrar ad spend')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : (isEditing ? 'Error al actualizar ad spend' : 'Error al registrar ad spend'))
     } finally {
       setLoading(false)
     }

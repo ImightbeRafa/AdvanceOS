@@ -57,8 +57,8 @@ export function PaymentModal({ set, clientId, open, onOpenChange }: PaymentModal
       toast.success('Pago registrado')
       onOpenChange(false)
       router.refresh()
-    } catch (e) {
-      toast.error('Error al registrar pago')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al registrar pago')
     } finally {
       setLoading(false)
     }

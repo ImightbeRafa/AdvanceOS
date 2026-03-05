@@ -160,13 +160,14 @@ export async function replyToTicket(ticketId: string, data: FeedbackReplyFormDat
     .single()
 
   if (ticket && ticket.user_id !== user.id && !data.is_internal) {
-    await supabase.from('notifications').insert({
+    const { error: notifError } = await supabase.from('notifications').insert({
       user_id: ticket.user_id,
       type: 'feedback_reply',
       title: 'Respuesta a tu ticket',
       message: data.message.substring(0, 100),
       action_url: null,
     })
+    if (notifError) throw new Error(notifError.message)
   }
 
   revalidatePath('/feedback')

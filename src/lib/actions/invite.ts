@@ -71,13 +71,14 @@ export async function inviteUser(data: InviteFormData): Promise<{ link?: string 
 
       if (linkError) throw new Error(linkError.message)
 
-      await serviceClient.from('activity_log').insert({
+      const { error: logError } = await serviceClient.from('activity_log').insert({
         entity_type: 'invite',
         entity_id: existing.id,
         action: 'created',
         user_id: user.id,
         details: { email: data.email, role: data.role, full_name: data.full_name, via: 'magiclink' },
       })
+      if (logError) throw new Error(logError.message)
 
       revalidatePath('/equipo')
       return { link: linkData.properties.action_link }
@@ -86,13 +87,14 @@ export async function inviteUser(data: InviteFormData): Promise<{ link?: string 
 
   if (result.error) throw new Error(result.error.message)
 
-  await serviceClient.from('activity_log').insert({
+  const { error: logError } = await serviceClient.from('activity_log').insert({
     entity_type: 'invite',
     entity_id: result.data.user?.id ?? '00000000-0000-0000-0000-000000000000',
     action: 'created',
     user_id: user.id,
     details: { email: data.email, role: data.role, full_name: data.full_name, via: 'email' },
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/equipo')
   return {}
@@ -111,13 +113,14 @@ export async function resendInvite(memberId: string, email: string): Promise<{ l
 
   if (linkError) throw new Error(linkError.message)
 
-  await serviceClient.from('activity_log').insert({
+  const { error: logError } = await serviceClient.from('activity_log').insert({
     entity_type: 'invite',
     entity_id: memberId,
     action: 'resent',
     user_id: user.id,
     details: { email },
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/equipo')
   return { link: linkData.properties.action_link }
@@ -146,13 +149,14 @@ export async function deactivateUser(memberId: string) {
     ban_duration: '876000h',
   })
 
-  await serviceClient.from('activity_log').insert({
+  const { error: logError } = await serviceClient.from('activity_log').insert({
     entity_type: 'profile',
     entity_id: memberId,
     action: 'deactivated',
     user_id: user.id,
     details: { email: member?.email, full_name: member?.full_name },
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/equipo')
 }
@@ -181,7 +185,19 @@ export async function deleteUser(memberId: string) {
   await serviceClient.from('feedback_tickets').delete().eq('user_id', memberId)
   await serviceClient.from('commissions').delete().eq('team_member_id', memberId)
   await serviceClient.from('salary_payments').delete().eq('team_member_id', memberId)
-  await serviceClient.from('sets').delete().or(`setter_id.eq.${memberId},closer_id.eq.${memberId}`)
+
+  // Fetch sets owned by this member, then clean up child rows before deleting sets
+  const { data: memberSets } = await serviceClient
+    .from('sets')
+    .select('id')
+    .or(`setter_id.eq.${memberId},closer_id.eq.${memberId}`)
+  const memberSetIds = (memberSets ?? []).map(s => s.id)
+  if (memberSetIds.length > 0) {
+    await serviceClient.from('payments').delete().in('set_id', memberSetIds)
+    await serviceClient.from('clients').delete().in('set_id', memberSetIds)
+    await serviceClient.from('sets').delete().in('id', memberSetIds)
+  }
+
   await serviceClient.from('notifications').delete().eq('user_id', memberId)
 
   await serviceClient.from('activity_log').insert({
@@ -221,13 +237,14 @@ export async function reactivateUser(memberId: string) {
     ban_duration: 'none',
   })
 
-  await serviceClient.from('activity_log').insert({
+  const { error: logError } = await serviceClient.from('activity_log').insert({
     entity_type: 'profile',
     entity_id: memberId,
     action: 'reactivated',
     user_id: user.id,
     details: { email: member?.email, full_name: member?.full_name },
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/equipo')
 }

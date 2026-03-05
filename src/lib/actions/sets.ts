@@ -49,21 +49,23 @@ export async function createSet(data: CreateSetFormData) {
 
   if (error) throw new Error(error.message)
 
-  await supabase.from('set_status_history').insert({
+  const { error: historyError } = await supabase.from('set_status_history').insert({
     set_id: newSet.id,
     old_status: null,
     new_status: 'agendado',
     changed_by: user.id,
     notes: 'Set creado',
   })
+  if (historyError) throw new Error(historyError.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'set',
     entity_id: newSet.id,
     action: 'created',
     user_id: user.id,
     details: { prospect_name: data.prospect_name, service: data.service_offered },
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/ventas')
   return newSet
@@ -92,13 +94,14 @@ export async function updateSet(setId: string, data: CreateSetFormData) {
 
   if (error) throw new Error(error.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'set',
     entity_id: setId,
     action: 'updated',
     user_id: user.id,
     details: { prospect_name: data.prospect_name, service: data.service_offered },
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/ventas')
 }
@@ -131,15 +134,16 @@ export async function updateSetStatus(setId: string, newStatus: SetStatus, notes
 
   if (error) throw new Error(error.message)
 
-  await supabase.from('set_status_history').insert({
+  const { error: historyError } = await supabase.from('set_status_history').insert({
     set_id: setId,
     old_status: currentSet.status,
     new_status: newStatus,
     changed_by: user.id,
     notes: scheduledAt ? `Re-agendado para ${scheduledAt}` : (notes ?? null),
   })
+  if (historyError) throw new Error(historyError.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'set',
     entity_id: setId,
     action: 'status_changed',
@@ -150,6 +154,7 @@ export async function updateSetStatus(setId: string, newStatus: SetStatus, notes
       ...(scheduledAt ? { scheduled_at: scheduledAt } : {}),
     },
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/ventas')
 }
@@ -205,7 +210,8 @@ export async function createDealClosed(setId: string, data: CloseDealFormData) {
     item_key: item.key,
     label: item.label,
   }))
-  await supabase.from('onboarding_checklist').insert(checklistItems)
+  const { error: checklistError } = await supabase.from('onboarding_checklist').insert(checklistItems)
+  if (checklistError) throw new Error(checklistError.message)
 
   if (data.service_sold === 'advance90') {
     const startDate = nowCR()
@@ -220,9 +226,10 @@ export async function createDealClosed(setId: string, data: CloseDealFormData) {
       order: phase.order,
     }))
 
-    await supabase
+    const { error: phasesError } = await supabase
       .from('advance90_phases')
       .insert(phases)
+    if (phasesError) throw new Error(phasesError.message)
   }
 
   if (data.amount_collected && data.amount_collected > 0 && data.payment_method) {
@@ -231,7 +238,7 @@ export async function createDealClosed(setId: string, data: CloseDealFormData) {
       data.payment_method === 'tilopay' ? (data.tilopay_installment_months ?? null) : null
     )
 
-    const { data: payment } = await supabase
+    const { data: payment, error: paymentError } = await supabase
       .from('payments')
       .insert({
         set_id: setId,
@@ -247,58 +254,63 @@ export async function createDealClosed(setId: string, data: CloseDealFormData) {
       .select()
       .single()
 
-    if (payment) {
-      const setterCommission = calculateCommission(netAmount, 'setter')
-      const closerCommission = calculateCommission(netAmount, 'closer')
+    if (paymentError) throw new Error(paymentError.message)
 
-      await supabase.from('commissions').insert([
-        {
-          payment_id: payment.id,
-          team_member_id: set.setter_id,
-          role: 'setter',
-          percentage: 0.05,
-          amount: setterCommission,
-        },
-        {
-          payment_id: payment.id,
-          team_member_id: set.closer_id,
-          role: 'closer',
-          percentage: 0.10,
-          amount: closerCommission,
-        },
-      ])
-    }
+    const setterCommission = calculateCommission(netAmount, 'setter')
+    const closerCommission = calculateCommission(netAmount, 'closer')
+
+    const { error: commError } = await supabase.from('commissions').insert([
+      {
+        payment_id: payment.id,
+        team_member_id: set.setter_id,
+        role: 'setter',
+        percentage: 0.05,
+        amount: setterCommission,
+      },
+      {
+        payment_id: payment.id,
+        team_member_id: set.closer_id,
+        role: 'closer',
+        percentage: 0.10,
+        amount: closerCommission,
+      },
+    ])
+    if (commError) throw new Error(commError.message)
   }
 
   const hasFullPayment = (data.amount_collected ?? 0) >= data.revenue_total
-  await supabase
+  const { error: statusError } = await supabase
     .from('sets')
     .update({ status: hasFullPayment ? 'closed' : 'closed_pendiente' })
     .eq('id', setId)
+  if (statusError) throw new Error(statusError.message)
 
-  await supabase.from('set_status_history').insert({
+  const { error: historyError } = await supabase.from('set_status_history').insert({
     set_id: setId,
     old_status: set.status,
     new_status: hasFullPayment ? 'closed' : 'closed_pendiente',
     changed_by: user.id,
     notes: `Deal cerrado. Revenue: ${data.revenue_total}`,
   })
+  if (historyError) throw new Error(historyError.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'set',
     entity_id: setId,
     action: 'deal_closed',
     user_id: user.id,
     details: { revenue: data.revenue_total, service: data.service_sold, client_id: client.id },
   })
+  if (logError) throw new Error(logError.message)
 
-  await supabase.from('notifications').insert({
+  const { error: notifError } = await supabase.from('notifications').insert({
     user_id: set.closer_id,
     type: 'deal_closed',
     title: 'Deal cerrado',
     message: `${set.prospect_name} — ${data.service_sold}`,
     action_url: `/clientes/${client.id}`,
   })
+  if (notifError) throw new Error(notifError.message)
 
   revalidatePath('/ventas')
   revalidatePath('/clientes')
@@ -313,38 +325,43 @@ export async function createDealFollowUp(setId: string, data: FollowUpFormData) 
   const { data: set } = await supabase.from('sets').select('status, closer_id').eq('id', setId).single()
   if (!set) throw new Error('Set no encontrado')
 
-  await supabase.from('deals').insert({
+  const { error: dealError } = await supabase.from('deals').insert({
     set_id: setId,
     outcome: 'follow_up',
     follow_up_date: data.follow_up_date,
     follow_up_notes: data.follow_up_notes,
   })
+  if (dealError) throw new Error(dealError.message)
 
-  await supabase.from('sets').update({ status: 'seguimiento' }).eq('id', setId)
+  const { error: statusError } = await supabase.from('sets').update({ status: 'seguimiento' }).eq('id', setId)
+  if (statusError) throw new Error(statusError.message)
 
-  await supabase.from('set_status_history').insert({
+  const { error: historyError } = await supabase.from('set_status_history').insert({
     set_id: setId,
     old_status: set.status,
     new_status: 'seguimiento',
     changed_by: user.id,
     notes: data.follow_up_notes,
   })
+  if (historyError) throw new Error(historyError.message)
 
-  await supabase.from('notifications').insert({
+  const { error: notifError } = await supabase.from('notifications').insert({
     user_id: set.closer_id,
     type: 'follow_up',
     title: 'Follow up programado',
     message: data.follow_up_notes,
     action_url: `/ventas/${setId}`,
   })
+  if (notifError) throw new Error(notifError.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'set',
     entity_id: setId,
     action: 'follow_up_created',
     user_id: user.id,
     details: { follow_up_date: data.follow_up_date, notes: data.follow_up_notes },
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/ventas')
 }
@@ -357,29 +374,33 @@ export async function createDealDisqualified(setId: string, data: DisqualifyForm
   const { data: set } = await supabase.from('sets').select('status').eq('id', setId).single()
   if (!set) throw new Error('Set no encontrado')
 
-  await supabase.from('deals').insert({
+  const { error: dealError } = await supabase.from('deals').insert({
     set_id: setId,
     outcome: 'descalificado',
     disqualified_reason: data.disqualified_reason,
   })
+  if (dealError) throw new Error(dealError.message)
 
-  await supabase.from('sets').update({ status: 'descalificado' }).eq('id', setId)
+  const { error: statusError } = await supabase.from('sets').update({ status: 'descalificado' }).eq('id', setId)
+  if (statusError) throw new Error(statusError.message)
 
-  await supabase.from('set_status_history').insert({
+  const { error: historyError } = await supabase.from('set_status_history').insert({
     set_id: setId,
     old_status: set.status,
     new_status: 'descalificado',
     changed_by: user.id,
     notes: data.disqualified_reason,
   })
+  if (historyError) throw new Error(historyError.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'set',
     entity_id: setId,
     action: 'disqualified',
     user_id: user.id,
     details: { reason: data.disqualified_reason },
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/ventas')
 }
@@ -397,7 +418,11 @@ export async function deleteSet(setId: string) {
 
   if (profile?.role !== 'admin') throw new Error('Solo admin puede eliminar sets')
 
-  const { data: set } = await supabase
+  // Use service client to bypass RLS for admin delete operations
+  const { createServiceClient } = await import('@/lib/supabase/server')
+  const serviceClient = await createServiceClient()
+
+  const { data: set } = await serviceClient
     .from('sets')
     .select('prospect_name')
     .eq('id', setId)
@@ -405,27 +430,23 @@ export async function deleteSet(setId: string) {
 
   if (!set) throw new Error('Set no encontrado')
 
-  // Delete related payments (CASCADE will handle commissions)
-  await supabase.from('payments').delete().eq('set_id', setId)
-
-  // Delete related clients (CASCADE will handle onboarding, forms, phases, assets)
-  await supabase.from('clients').delete().eq('set_id', setId)
-
-  // Delete the set (CASCADE will handle deals, set_status_history)
-  const { error } = await supabase
-    .from('sets')
-    .delete()
-    .eq('id', setId)
-
-  if (error) throw new Error(error.message)
-
-  await supabase.from('activity_log').insert({
+  // Log BEFORE delete so we always have a record
+  await serviceClient.from('activity_log').insert({
     entity_type: 'set',
     entity_id: setId,
     action: 'deleted',
     user_id: user.id,
     details: { prospect_name: set.prospect_name },
   })
+
+  // With ON DELETE CASCADE on all FKs, deleting the set cleans up
+  // deals, clients, payments, commissions, set_status_history, etc.
+  const { error } = await serviceClient
+    .from('sets')
+    .delete()
+    .eq('id', setId)
+
+  if (error) throw new Error(error.message)
 
   revalidatePath('/ventas')
   revalidatePath('/clientes')

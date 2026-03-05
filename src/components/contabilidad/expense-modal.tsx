@@ -59,8 +59,8 @@ export function ExpenseModal({ open, onOpenChange, expense }: ExpenseModalProps)
       }
       onOpenChange(false)
       router.refresh()
-    } catch {
-      toast.error(isEditing ? 'Error al actualizar gasto' : 'Error al registrar gasto')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : (isEditing ? 'Error al actualizar gasto' : 'Error al registrar gasto'))
     } finally {
       setLoading(false)
     }

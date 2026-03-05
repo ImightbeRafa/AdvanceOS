@@ -125,8 +125,8 @@ export function AccountingDashboard({ summary: initialSummary, expenses, adSpend
       await markCommissionPaid(id)
       toast.success('Comisión marcada como pagada')
       router.refresh()
-    } catch {
-      toast.error('Error al marcar comisión')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al marcar comisión')
     } finally {
       setPayingId(null)
     }
@@ -141,8 +141,8 @@ export function AccountingDashboard({ summary: initialSummary, expenses, adSpend
       }
       toast.success(`Todas las comisiones de ${memberId} marcadas como pagadas`)
       router.refresh()
-    } catch {
-      toast.error('Error al pagar comisiones')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al pagar comisiones')
     } finally {
       setPayingAllMember(null)
     }
@@ -172,8 +172,8 @@ export function AccountingDashboard({ summary: initialSummary, expenses, adSpend
       await deleteManualTransaction(id)
       toast.success('Movimiento eliminado')
       router.refresh()
-    } catch {
-      toast.error('Error al eliminar movimiento')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al eliminar movimiento')
     } finally {
       setDeletingId(null)
     }

@@ -54,8 +54,8 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
       setDuplicates([])
       onOpenChange(false)
       router.refresh()
-    } catch (e) {
-      toast.error('Error al crear el set')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al crear el set')
     } finally {
       setLoading(false)
     }

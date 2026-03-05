@@ -40,8 +40,8 @@ export function ManualTransactionModal({ open, onOpenChange }: ManualTransaction
       reset({ date: todayCR(), type: 'ingreso' })
       onOpenChange(false)
       router.refresh()
-    } catch {
-      toast.error('Error al registrar movimiento')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al registrar movimiento')
     } finally {
       setLoading(false)
     }

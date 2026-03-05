@@ -50,7 +50,7 @@ export async function toggleOnboardingItem(itemId: string, completed: boolean) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autenticado')
 
-  await supabase
+  const { error } = await supabase
     .from('onboarding_checklist')
     .update({
       completed,
@@ -59,6 +59,7 @@ export async function toggleOnboardingItem(itemId: string, completed: boolean) {
     })
     .eq('id', itemId)
 
+  if (error) throw new Error(error.message)
   revalidatePath('/clientes')
 }
 
@@ -67,18 +68,21 @@ export async function updateClientStatus(clientId: string, status: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autenticado')
 
-  await supabase
+  const { error } = await supabase
     .from('clients')
     .update({ status })
     .eq('id', clientId)
 
-  await supabase.from('activity_log').insert({
+  if (error) throw new Error(error.message)
+
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'client',
     entity_id: clientId,
     action: 'status_changed',
     user_id: user.id,
     details: { new_status: status },
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/clientes')
 }
@@ -88,11 +92,12 @@ export async function assignClient(clientId: string, assignedTo: string) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autenticado')
 
-  await supabase
+  const { error } = await supabase
     .from('clients')
     .update({ assigned_to: assignedTo })
     .eq('id', clientId)
 
+  if (error) throw new Error(error.message)
   revalidatePath('/clientes')
 }
 
@@ -173,14 +178,16 @@ export async function saveClientForm(
     .maybeSingle()
 
   if (existing) {
-    await supabase
+    const { error: updateError } = await supabase
       .from('client_forms')
       .update({ form_data: formData, progress_pct: progressPct, completed, business_type: businessType })
       .eq('id', existing.id)
+    if (updateError) throw new Error(updateError.message)
   } else {
-    await supabase
+    const { error: insertError } = await supabase
       .from('client_forms')
       .insert({ client_id: clientId, business_type: businessType, form_data: formData, progress_pct: progressPct, completed })
+    if (insertError) throw new Error(insertError.message)
   }
 
   if (completed && progressPct >= 100) {
@@ -254,18 +261,20 @@ export async function generateClientBrief(clientId: string) {
     .maybeSingle()
 
   if (existingBrief) {
-    await supabase
+    const { error: briefUpdateError } = await supabase
       .from('client_assets')
       .update({ url: briefContent, notes: 'Auto-generado desde formulario completo' })
       .eq('id', existingBrief.id)
+    if (briefUpdateError) throw new Error(briefUpdateError.message)
   } else {
-    await supabase.from('client_assets').insert({
+    const { error: briefInsertError } = await supabase.from('client_assets').insert({
       client_id: clientId,
       type: 'link',
       name: 'Brief del cliente',
       url: briefContent,
       notes: 'Auto-generado desde formulario completo',
     })
+    if (briefInsertError) throw new Error(briefInsertError.message)
   }
 
   const { data: existingSummary } = await supabase
@@ -284,18 +293,20 @@ export async function generateClientBrief(clientId: string) {
   const summaryContent = summaryLines.join(' | ')
 
   if (existingSummary) {
-    await supabase
+    const { error: summaryUpdateError } = await supabase
       .from('client_assets')
       .update({ url: summaryContent, notes: 'Auto-generado' })
       .eq('id', existingSummary.id)
+    if (summaryUpdateError) throw new Error(summaryUpdateError.message)
   } else {
-    await supabase.from('client_assets').insert({
+    const { error: summaryInsertError } = await supabase.from('client_assets').insert({
       client_id: clientId,
       type: 'link',
       name: 'Resumen del formulario',
       url: summaryContent,
       notes: 'Auto-generado',
     })
+    if (summaryInsertError) throw new Error(summaryInsertError.message)
   }
 
   revalidatePath(`/clientes/${clientId}`)
@@ -306,13 +317,14 @@ export async function addClientNote(clientId: string, noteType: string, content:
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autenticado')
 
-  await supabase.from('activity_log').insert({
+  const { error } = await supabase.from('activity_log').insert({
     entity_type: 'client',
     entity_id: clientId,
     action: noteType,
     user_id: user.id,
     details: { content },
   })
+  if (error) throw new Error(error.message)
 
   revalidatePath(`/clientes/${clientId}`)
 }
@@ -330,7 +342,11 @@ export async function deleteClient(clientId: string) {
 
   if (profile?.role !== 'admin') throw new Error('Solo admin puede eliminar clientes')
 
-  const { data: client } = await supabase
+  // Use service client to bypass RLS for admin delete operations
+  const { createServiceClient } = await import('@/lib/supabase/server')
+  const serviceClient = await createServiceClient()
+
+  const { data: client } = await serviceClient
     .from('clients')
     .select('business_name, set_id')
     .eq('id', clientId)
@@ -338,24 +354,23 @@ export async function deleteClient(clientId: string) {
 
   if (!client) throw new Error('Cliente no encontrado')
 
-  // Delete payments linked to client (CASCADE handles commissions)
-  await supabase.from('payments').delete().eq('client_id', clientId)
-
-  // Delete the client (CASCADE handles onboarding, forms, phases, assets)
-  const { error } = await supabase
-    .from('clients')
-    .delete()
-    .eq('id', clientId)
-
-  if (error) throw new Error(error.message)
-
-  await supabase.from('activity_log').insert({
+  // Log BEFORE delete so we always have a record
+  await serviceClient.from('activity_log').insert({
     entity_type: 'client',
     entity_id: clientId,
     action: 'deleted',
     user_id: user.id,
     details: { business_name: client.business_name },
   })
+
+  // With ON DELETE CASCADE, deleting the client cleans up
+  // payments, commissions, onboarding, forms, phases, assets
+  const { error } = await serviceClient
+    .from('clients')
+    .delete()
+    .eq('id', clientId)
+
+  if (error) throw new Error(error.message)
 
   revalidatePath('/clientes')
   revalidatePath('/ventas')

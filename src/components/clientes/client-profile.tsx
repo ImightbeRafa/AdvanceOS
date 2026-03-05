@@ -58,8 +58,8 @@ export function ClientProfile({
     try {
       await toggleOnboardingItem(itemId, checked)
       router.refresh()
-    } catch {
-      toast.error('Error al actualizar')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al actualizar')
     }
   }
 
@@ -68,8 +68,8 @@ export function ClientProfile({
       await updateClientStatus(client.id, status)
       toast.success('Estado actualizado')
       router.refresh()
-    } catch {
-      toast.error('Error al actualizar estado')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al actualizar estado')
     }
   }
 

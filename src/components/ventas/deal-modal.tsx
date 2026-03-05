@@ -53,8 +53,8 @@ export function DealModal({ set, open, onOpenChange }: DealModalProps) {
       toast.success('Deal cerrado — cliente creado')
       onOpenChange(false)
       router.refresh()
-    } catch (e) {
-      toast.error('Error al cerrar deal')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al cerrar deal')
     } finally {
       setLoading(false)
     }
@@ -67,8 +67,8 @@ export function DealModal({ set, open, onOpenChange }: DealModalProps) {
       toast.success('Follow up programado')
       onOpenChange(false)
       router.refresh()
-    } catch (e) {
-      toast.error('Error al crear follow up')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al crear follow up')
     } finally {
       setLoading(false)
     }
@@ -81,8 +81,8 @@ export function DealModal({ set, open, onOpenChange }: DealModalProps) {
       toast.success('Set descalificado')
       onOpenChange(false)
       router.refresh()
-    } catch (e) {
-      toast.error('Error al descalificar')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al descalificar')
     } finally {
       setLoading(false)
     }

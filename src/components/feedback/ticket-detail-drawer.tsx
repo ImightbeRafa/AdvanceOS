@@ -92,8 +92,8 @@ export function TicketDetailDrawer({ open, onOpenChange, ticket, teamMembers }: 
       toast.success('Estado actualizado')
       await loadTicket()
       router.refresh()
-    } catch {
-      toast.error('Error al actualizar estado')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al actualizar estado')
     } finally {
       setLoadingStatus(false)
     }
@@ -107,8 +107,8 @@ export function TicketDetailDrawer({ open, onOpenChange, ticket, teamMembers }: 
       toast.success('Asignación actualizada')
       await loadTicket()
       router.refresh()
-    } catch {
-      toast.error('Error al asignar')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al asignar')
     } finally {
       setLoadingAssign(false)
     }
@@ -120,8 +120,8 @@ export function TicketDetailDrawer({ open, onOpenChange, ticket, teamMembers }: 
     try {
       await updateTicketAdminNotes(ticket.id, adminNotes)
       toast.success('Notas guardadas')
-    } catch {
-      toast.error('Error al guardar notas')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al guardar notas')
     } finally {
       setLoadingNotes(false)
     }
@@ -136,8 +136,8 @@ export function TicketDetailDrawer({ open, onOpenChange, ticket, teamMembers }: 
       reset()
       await loadTicket()
       router.refresh()
-    } catch {
-      toast.error('Error al enviar respuesta')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al enviar respuesta')
     } finally {
       setLoadingReply(false)
     }

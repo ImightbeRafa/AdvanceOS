@@ -60,7 +60,7 @@ export async function registerPayment(setId: string, clientId: string | null, da
   const setterCommission = calculateCommission(netAmount, 'setter')
   const closerCommission = calculateCommission(netAmount, 'closer')
 
-  await supabase.from('commissions').insert([
+  const { error: commError } = await supabase.from('commissions').insert([
     {
       payment_id: payment.id,
       team_member_id: set.setter_id,
@@ -76,6 +76,7 @@ export async function registerPayment(setId: string, clientId: string | null, da
       amount: closerCommission,
     },
   ])
+  if (commError) throw new Error(commError.message)
 
   const { data: deal } = await supabase
     .from('deals')
@@ -93,19 +94,21 @@ export async function registerPayment(setId: string, clientId: string | null, da
     const totalCollected = (allPayments ?? []).reduce((sum, p) => sum + Number(p.amount_gross), 0)
 
     if (totalCollected >= Number(deal.revenue_total)) {
-      await supabase.from('sets').update({ status: 'closed' }).eq('id', setId)
+      const { error: statusError } = await supabase.from('sets').update({ status: 'closed' }).eq('id', setId)
+      if (statusError) throw new Error(statusError.message)
 
-      await supabase.from('set_status_history').insert({
+      const { error: historyError } = await supabase.from('set_status_history').insert({
         set_id: setId,
         old_status: 'closed_pendiente',
         new_status: 'closed',
         changed_by: user.id,
         notes: 'Pago completado — saldo cubierto',
       })
+      if (historyError) throw new Error(historyError.message)
     }
   }
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'payment',
     entity_id: payment.id,
     action: 'payment_registered',
@@ -118,6 +121,7 @@ export async function registerPayment(setId: string, clientId: string | null, da
       method: data.payment_method,
     },
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/ventas')
   revalidatePath('/clientes')
@@ -140,13 +144,14 @@ export async function markCommissionPaid(commissionId: string) {
 
   if (error) throw new Error(error.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'commission',
     entity_id: commissionId,
     action: 'commission_paid',
     user_id: user.id,
     details: {},
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/equipo')
   revalidatePath('/contabilidad')

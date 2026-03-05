@@ -57,8 +57,8 @@ export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalP
       toast.success('Set actualizado')
       onOpenChange(false)
       router.refresh()
-    } catch {
-      toast.error('Error al actualizar el set')
+    } catch (e: unknown) {
+      toast.error(e instanceof Error ? e.message : 'Error al actualizar el set')
     } finally {
       setLoading(false)
     }

@@ -47,13 +47,14 @@ export async function updateTeamMember(
 
   if (error) throw new Error(error.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'profile',
     entity_id: id,
     action: 'updated',
     user_id: user.id,
     details: data,
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/equipo')
 }

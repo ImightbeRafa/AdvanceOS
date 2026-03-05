@@ -146,13 +146,14 @@ export async function createExpense(data: ExpenseFormData) {
 
   if (error) throw new Error(error.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'expense',
     entity_id: '00000000-0000-0000-0000-000000000000',
     action: 'created',
     user_id: user.id,
     details: data,
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/contabilidad')
 }
@@ -173,13 +174,14 @@ export async function updateExpense(id: string, data: ExpenseFormData) {
 
   if (error) throw new Error(error.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'expense',
     entity_id: id,
     action: 'updated',
     user_id: user.id,
     details: data,
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/contabilidad')
 }
@@ -207,13 +209,14 @@ export async function updateAdSpend(id: string, data: AdSpendFormData) {
 
   if (error) throw new Error(error.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'ad_spend',
     entity_id: id,
     action: 'updated',
     user_id: user.id,
     details: data,
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/contabilidad')
 }
@@ -326,13 +329,14 @@ export async function createManualTransaction(data: ManualTransactionFormData) {
 
   if (error) throw new Error(error.message)
 
-  await supabase.from('activity_log').insert({
+  const { error: logError } = await supabase.from('activity_log').insert({
     entity_type: 'manual_transaction',
     entity_id: '00000000-0000-0000-0000-000000000000',
     action: 'created',
     user_id: user.id,
     details: data,
   })
+  if (logError) throw new Error(logError.message)
 
   revalidatePath('/contabilidad')
 }

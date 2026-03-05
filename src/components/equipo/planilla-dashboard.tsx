@@ -70,8 +70,8 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
         await markCommissionPaid(id)
         toast.success('Comisión marcada como pagada')
         router.refresh()
-      } catch {
-        toast.error('Error al actualizar comisión')
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : 'Error al actualizar comisión')
       }
     })
   }
@@ -86,8 +86,8 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
         }
         toast.success(`Todas las comisiones de ${memberName} marcadas como pagadas`)
         router.refresh()
-      } catch {
-        toast.error('Error al pagar comisiones')
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : 'Error al pagar comisiones')
       } finally {
         setPayingAllMember(null)
       }
@@ -100,8 +100,8 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
         await markSalaryPaid(id)
         toast.success('Salario marcado como pagado')
         router.refresh()
-      } catch {
-        toast.error('Error al actualizar salario')
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : 'Error al actualizar salario')
       }
     })
   }
@@ -118,8 +118,8 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
         await generateSalaryPayments(label)
         toast.success('Pagos de salario generados')
         router.refresh()
-      } catch {
-        toast.error('Error al generar salarios')
+      } catch (e: unknown) {
+        toast.error(e instanceof Error ? e.message : 'Error al generar salarios')
       }
     })
   }
