@@ -32,7 +32,7 @@ import dynamic from 'next/dynamic'
 const CreateSetModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[] }>(
   () => import('./create-set-modal').then(m => ({ default: m.CreateSetModal }))
 )
-const SetDetailDrawer = dynamic<{ set: Set | null; open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[] }>(
+const SetDetailDrawer = dynamic<{ set: Set | null; open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[]; paymentsBySet?: Record<string, { totalGross: number; totalNet: number }>; userRole?: UserRole }>(
   () => import('./set-detail-drawer').then(m => ({ default: m.SetDetailDrawer }))
 )
 const PaymentModal = dynamic<{ set: Set; clientId: string | null; open: boolean; onOpenChange: (open: boolean) => void }>(
@@ -570,7 +570,7 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
       </Tabs>
 
       <CreateSetModal open={showCreateModal} onOpenChange={setShowCreateModal} closers={closers} />
-      <SetDetailDrawer set={selectedSet} open={!!selectedSet} onOpenChange={(open: boolean) => { if (!open) setSelectedSet(null) }} closers={closers} />
+      <SetDetailDrawer set={selectedSet} open={!!selectedSet} onOpenChange={(open: boolean) => { if (!open) setSelectedSet(null) }} closers={closers} paymentsBySet={paymentsBySet} userRole={userRole} />
       {paymentSet && (
         <PaymentModal set={paymentSet} clientId={null} open={!!paymentSet} onOpenChange={(open: boolean) => { if (!open) setPaymentSet(null) }} />
       )}

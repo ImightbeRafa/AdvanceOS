@@ -280,7 +280,7 @@ export async function markSalaryPaid(salaryPaymentId: string) {
   const { supabase } = await requireAdmin()
   const { error } = await supabase
     .from('salary_payments')
-    .update({ status: 'paid' })
+    .update({ status: 'pagado', paid_date: todayCR() })
     .eq('id', salaryPaymentId)
 
   if (error) throw new Error(error.message)

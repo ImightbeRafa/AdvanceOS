@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { useRouter } from 'next/navigation'
-import type { Set, Profile } from '@/types'
+import type { Set, Profile, UserRole } from '@/types'
 import { QuickViewDrawer } from '@/components/shared/quick-view-drawer'
 import { StatusChip } from '@/components/shared/status-chip'
 import {
@@ -38,9 +38,11 @@ interface SetDetailDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   closers: Pick<Profile, 'id' | 'full_name'>[]
+  paymentsBySet?: Record<string, { totalGross: number; totalNet: number }>
+  userRole?: UserRole
 }
 
-export function SetDetailDrawer({ set, open, onOpenChange, closers }: SetDetailDrawerProps) {
+export function SetDetailDrawer({ set, open, onOpenChange, closers, paymentsBySet, userRole }: SetDetailDrawerProps) {
   const router = useRouter()
   const [showDealModal, setShowDealModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -216,9 +218,9 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers }: SetDetailD
                   <div className="rounded-lg border border-warning/30 bg-warning/5 p-3 space-y-2">
                     <h4 className="text-sm font-medium text-warning">Saldo pendiente</h4>
                     {(() => {
-                      const payments = set.payments ?? []
-                      const totalPaid = payments.reduce((sum, p) => sum + (p.amount_gross ?? 0), 0)
-                      const totalNet = payments.reduce((sum, p) => sum + (p.amount_net ?? 0), 0)
+                      const setPaymentData = paymentsBySet?.[set.id] ?? { totalGross: 0, totalNet: 0 }
+                      const totalPaid = setPaymentData.totalGross
+                      const totalNet = setPaymentData.totalNet
                       const remaining = deal.revenue_total! - totalPaid
                       return (
                         <div className="grid grid-cols-2 gap-1 text-sm">
@@ -230,8 +232,8 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers }: SetDetailD
                           <span>{formatUSD(totalNet)}</span>
                           <span className="text-muted-foreground font-medium">Saldo restante</span>
                           <span className="font-bold text-warning">{formatUSD(remaining > 0 ? remaining : 0)}</span>
-                          <span className="text-muted-foreground">Pagos registrados</span>
-                          <span>{payments.length}</span>
+                          <span className="text-muted-foreground">Estado</span>
+                          <span>{totalPaid >= deal.revenue_total! ? 'Pagado' : 'Pendiente'}</span>
                         </div>
                       )
                     })()}
@@ -305,7 +307,7 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers }: SetDetailD
                   </Button>
                 </>
               )}
-              {!['closed', 'descalificado'].includes(set.status) && (
+              {!['closed', 'descalificado'].includes(set.status) && userRole !== 'setter' && (
                 <Button
                   size="sm"
                   onClick={() => setShowDealModal(true)}

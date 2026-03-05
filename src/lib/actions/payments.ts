@@ -152,21 +152,3 @@ export async function markCommissionPaid(commissionId: string) {
   revalidatePath('/contabilidad')
 }
 
-export async function markSalaryPaid(salaryPaymentId: string) {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) throw new Error('No autenticado')
-
-  const { error } = await supabase
-    .from('salary_payments')
-    .update({
-      status: 'pagado',
-      paid_date: todayCR(),
-    })
-    .eq('id', salaryPaymentId)
-
-  if (error) throw new Error(error.message)
-
-  revalidatePath('/equipo')
-  revalidatePath('/contabilidad')
-}

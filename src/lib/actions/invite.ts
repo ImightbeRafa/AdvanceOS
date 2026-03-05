@@ -29,7 +29,7 @@ export async function inviteUser(data: InviteFormData): Promise<{ link?: string 
 
   const inviteOptions = {
     data: { full_name: data.full_name, role: data.role },
-    redirectTo: `${origin}/auth/confirm`,
+    redirectTo: `${origin}/auth/callback`,
   }
 
   const result = await serviceClient.auth.admin.inviteUserByEmail(
@@ -172,9 +172,7 @@ export async function deleteUser(memberId: string) {
   // Nullify nullable FK references
   await serviceClient.from('set_status_history').update({ changed_by: null }).eq('changed_by', memberId)
   await serviceClient.from('clients').update({ assigned_to: null }).eq('assigned_to', memberId)
-  await serviceClient.from('advance90_checklist_items').update({ completed_by: null }).eq('completed_by', memberId)
-  await serviceClient.from('advance90_deliverables').update({ assigned_to: null }).eq('assigned_to', memberId)
-  await serviceClient.from('advance90_resources').update({ uploaded_by: null }).eq('uploaded_by', memberId)
+  await serviceClient.from('onboarding_checklist').update({ completed_by: null }).eq('completed_by', memberId)
   await serviceClient.from('feedback_tickets').update({ assigned_to: null }).eq('assigned_to', memberId)
   await serviceClient.from('activity_log').update({ user_id: null }).eq('user_id', memberId)
 
