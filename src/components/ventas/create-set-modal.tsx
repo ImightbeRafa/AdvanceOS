@@ -169,24 +169,30 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
 
       const parsed = await res.json()
 
-      if (parsed.prospect_name) setValue('prospect_name', parsed.prospect_name, { shouldValidate: true })
-      if (parsed.prospect_whatsapp) setValue('prospect_whatsapp', parsed.prospect_whatsapp, { shouldValidate: true })
-      if (parsed.prospect_ig) setValue('prospect_ig', parsed.prospect_ig, { shouldValidate: true })
-      if (parsed.prospect_web) setValue('prospect_web', parsed.prospect_web, { shouldValidate: true })
-      if (parsed.summary) setValue('summary', parsed.summary, { shouldValidate: true })
-      if (parsed.service_offered === 'advance90' || parsed.service_offered === 'meta_advance') {
-        setValue('service_offered', parsed.service_offered, { shouldValidate: true })
-      }
-
+      let closerId: string | undefined
       if (parsed.closer_name && closers.length > 0) {
         const normalise = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
         const target = normalise(parsed.closer_name)
         const match = closers.find((c) => normalise(c.full_name) === target)
           || closers.find((c) => normalise(c.full_name).includes(target) || target.includes(normalise(c.full_name)))
-        if (match) {
-          setValue('closer_id', match.id, { shouldValidate: true })
-        }
+        if (match) closerId = match.id
       }
+      if (!closerId && closers.length === 1) closerId = closers[0].id
+
+      const serviceValue = (parsed.service_offered === 'advance90' || parsed.service_offered === 'meta_advance')
+        ? parsed.service_offered
+        : undefined
+
+      reset({
+        prospect_name: parsed.prospect_name || '',
+        prospect_whatsapp: parsed.prospect_whatsapp || '',
+        prospect_ig: parsed.prospect_ig || '',
+        prospect_web: parsed.prospect_web || '',
+        summary: parsed.summary || '',
+        service_offered: serviceValue as 'advance90' | 'meta_advance' | undefined,
+        closer_id: closerId || '',
+        scheduled_at: '',
+      } as CreateSetFormData)
 
       if (parsed.ig_missing) {
         toast.warning('Instagram no detectado — completalo manualmente en el formulario')
@@ -236,7 +242,7 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="paste" forceMount className={activeTab !== 'paste' ? 'hidden' : ''}>
+          <TabsContent value="paste">
             <div className="space-y-4 pt-2">
               {/* Image upload area */}
               <div className="space-y-2">
@@ -330,7 +336,7 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
             </div>
           </TabsContent>
 
-          <TabsContent value="manual" forceMount className={activeTab !== 'manual' ? 'hidden' : ''}>
+          <TabsContent value="manual">
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label>Nombre del prospecto <span className="text-destructive">*</span></Label>
