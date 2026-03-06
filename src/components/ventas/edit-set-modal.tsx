@@ -38,7 +38,7 @@ export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalP
       ? {
           prospect_name: set.prospect_name,
           prospect_whatsapp: set.prospect_whatsapp ?? '',
-          prospect_ig: set.prospect_ig,
+          prospect_ig: set.prospect_ig ?? '',
           prospect_web: set.prospect_web ?? '',
           closer_id: set.closer_id,
           scheduled_at: set.scheduled_at ? set.scheduled_at.slice(0, 16) : '',
@@ -84,7 +84,7 @@ export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalP
           </div>
 
           <div className="space-y-2">
-            <Label>Instagram del negocio <span className="text-destructive">*</span></Label>
+            <Label>Instagram del negocio</Label>
             <Input {...register('prospect_ig')} />
             {errors.prospect_ig && <p className="text-xs text-destructive">{errors.prospect_ig.message}</p>}
           </div>

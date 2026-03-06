@@ -70,9 +70,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: 'XAI_API_KEY no configurada' }, { status: 500 })
   }
 
-  const body = await request.json()
-  const text: string | undefined = body.text
-  const images: string[] | undefined = body.images
+  let body: Record<string, unknown>
+  try {
+    body = await request.json()
+  } catch {
+    return NextResponse.json({ error: 'Request body inválido' }, { status: 400 })
+  }
+  const text: string | undefined = body.text as string | undefined
+  const images: string[] | undefined = body.images as string[] | undefined
 
   const hasText = text && typeof text === 'string' && text.trim().length >= 10
   const hasImages = Array.isArray(images) && images.length > 0
@@ -138,41 +143,33 @@ export async function POST(request: Request) {
 
     const data = await response.json()
     const msg = data.choices?.[0]?.message
-    console.log('xAI message keys:', msg ? Object.keys(msg) : 'no message')
 
     // Try content first, then reasoning_content (for reasoning models)
     let content = msg?.content
     if (!content && msg?.reasoning_content) {
-      console.log('Using reasoning_content as fallback')
       content = msg.reasoning_content
     }
 
     if (!content) {
-      console.error('xAI content is empty. Full data:', JSON.stringify(data).slice(0, 2000))
+      console.error('xAI content is empty')
       return NextResponse.json({ error: 'Respuesta vacía de IA' }, { status: 502 })
     }
-
-    console.log('xAI content (first 1000 chars):', content.slice(0, 1000))
 
     // Clean potential markdown wrapping from response
     const cleanContent = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
 
-    // For reasoning models, the JSON might be at the end after thinking text
     // Try to extract JSON object from the content
     let parsed: Record<string, unknown>
     try {
       parsed = JSON.parse(cleanContent)
     } catch {
-      // If direct parse fails, try to find JSON object in the content
       const jsonMatch = cleanContent.match(/\{[\s\S]*\}/)
       if (jsonMatch) {
-        console.log('Extracted JSON from content:', jsonMatch[0].slice(0, 500))
         parsed = JSON.parse(jsonMatch[0])
       } else {
         throw new Error('No JSON found in AI response')
       }
     }
-    console.log('parsed result:', JSON.stringify(parsed))
 
     const igValue = parsed.prospect_ig || ''
 

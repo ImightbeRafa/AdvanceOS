@@ -35,11 +35,13 @@ interface CreateSetModalProps {
 
 const COMPRESS_MAX_DIM = 1600
 const COMPRESS_QUALITY = 0.85
+const IG_SKIP = ['', 'n/a', 'na', 'no', 'none', '-', 'sin', 'no tiene']
 
 function compressImage(file: File): Promise<string> {
   return new Promise((resolve, reject) => {
     const img = new Image()
     img.onload = () => {
+      URL.revokeObjectURL(img.src)
       let { width, height } = img
       // Scale down if larger than max dimension
       if (width > COMPRESS_MAX_DIM || height > COMPRESS_MAX_DIM) {
@@ -85,7 +87,9 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
   }, [closers, setValue])
 
   async function handleIGBlur() {
-    if (!igValue || igValue.length < 2) return
+    if (!igValue || igValue.length < 2) { setDuplicates([]); return }
+    const clean = igValue.toLowerCase().replace('@', '').trim()
+    if (IG_SKIP.includes(clean)) { setDuplicates([]); return }
     const results = await checkDuplicateIG(igValue)
     setDuplicates(results)
   }
@@ -178,8 +182,6 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
         if (match) closerId = match.id
       }
       if (!closerId && closers.length === 1) closerId = closers[0].id
-
-      console.log('AI parsed:', parsed, 'closerId:', closerId)
 
       if (parsed.prospect_name) setValue('prospect_name', parsed.prospect_name, { shouldValidate: true })
       if (parsed.prospect_whatsapp) setValue('prospect_whatsapp', parsed.prospect_whatsapp, { shouldValidate: true })
@@ -354,7 +356,7 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
               </div>
 
               <div className="space-y-2">
-                <Label>Instagram del negocio <span className="text-destructive">*</span></Label>
+                <Label>Instagram del negocio</Label>
                 <Input
                   placeholder="@negocio"
                   {...register('prospect_ig')}

@@ -9,7 +9,16 @@ import { todayCR, nowCR } from '@/lib/utils/dates'
 import type { SetStatus } from '@/types'
 import { addDays, format } from 'date-fns'
 
+const IG_PLACEHOLDERS = ['', 'n/a', 'na', 'no', 'none', '-', 'sin', 'no tiene']
+
+function isBlankIG(ig: string): boolean {
+  const clean = ig.toLowerCase().replace('@', '').trim()
+  return !clean || IG_PLACEHOLDERS.includes(clean)
+}
+
 export async function checkDuplicateIG(ig: string) {
+  if (isBlankIG(ig)) return []
+
   const supabase = await createClient()
   const { data } = await supabase
     .from('sets')
@@ -25,9 +34,11 @@ export async function createSet(data: CreateSetFormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autenticado')
 
-  const igClean = data.prospect_ig.toLowerCase().replace('@', '')
+  const igRaw = data.prospect_ig || ''
+  const igClean = igRaw.toLowerCase().replace('@', '').trim()
+  const igValue = isBlankIG(igRaw) ? null : igClean
 
-  const existing = await checkDuplicateIG(igClean)
+  const existing = igValue ? await checkDuplicateIG(igClean) : []
   const isDuplicate = existing.length > 0
 
   const { data: newSet, error } = await supabase
@@ -35,7 +46,7 @@ export async function createSet(data: CreateSetFormData) {
     .insert({
       prospect_name: data.prospect_name,
       prospect_whatsapp: data.prospect_whatsapp || null,
-      prospect_ig: igClean,
+      prospect_ig: igValue,
       prospect_web: data.prospect_web || null,
       setter_id: user.id,
       closer_id: data.closer_id,
@@ -76,14 +87,16 @@ export async function updateSet(setId: string, data: CreateSetFormData) {
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('No autenticado')
 
-  const igClean = data.prospect_ig.toLowerCase().replace('@', '')
+  const igRaw = data.prospect_ig || ''
+  const igClean = igRaw.toLowerCase().replace('@', '').trim()
+  const igValue = isBlankIG(igRaw) ? null : igClean
 
   const { error } = await supabase
     .from('sets')
     .update({
       prospect_name: data.prospect_name,
       prospect_whatsapp: data.prospect_whatsapp || null,
-      prospect_ig: igClean,
+      prospect_ig: igValue,
       prospect_web: data.prospect_web || null,
       closer_id: data.closer_id,
       scheduled_at: data.scheduled_at || null,
