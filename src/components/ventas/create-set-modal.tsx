@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useRef, useCallback } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createSetSchema, type CreateSetFormData } from '@/lib/schemas'
@@ -21,7 +21,11 @@ import {
 } from '@/components/ui/select'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
-import { AlertTriangle, Sparkles, Loader2, ClipboardPaste } from 'lucide-react'
+import { AlertTriangle, Sparkles, Loader2, ImagePlus, X, Camera } from 'lucide-react'
+
+const MAX_IMAGES = 5
+const MAX_IMAGE_SIZE = 20 * 1024 * 1024 // 20 MiB
+const ACCEPTED_TYPES = ['image/jpeg', 'image/jpg', 'image/png']
 
 interface CreateSetModalProps {
   open: boolean
@@ -29,14 +33,45 @@ interface CreateSetModalProps {
   closers: Pick<Profile, 'id' | 'full_name'>[]
 }
 
+const COMPRESS_MAX_DIM = 1600
+const COMPRESS_QUALITY = 0.85
+
+function compressImage(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      let { width, height } = img
+      // Scale down if larger than max dimension
+      if (width > COMPRESS_MAX_DIM || height > COMPRESS_MAX_DIM) {
+        const ratio = Math.min(COMPRESS_MAX_DIM / width, COMPRESS_MAX_DIM / height)
+        width = Math.round(width * ratio)
+        height = Math.round(height * ratio)
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) { reject(new Error('Canvas not supported')); return }
+      ctx.drawImage(img, 0, 0, width, height)
+      const dataUrl = canvas.toDataURL('image/jpeg', COMPRESS_QUALITY)
+      resolve(dataUrl)
+    }
+    img.onerror = () => reject(new Error('Error al cargar imagen'))
+    img.src = URL.createObjectURL(file)
+  })
+}
+
 export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [parsing, setParsing] = useState(false)
   const [pasteText, setPasteText] = useState('')
+  const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [activeTab, setActiveTab] = useState('manual')
   const [duplicates, setDuplicates] = useState<{ id: string; prospect_name: string; status: string }[]>([])
   const [serviceKey, setServiceKey] = useState(0)
+  const [dragOver, setDragOver] = useState(false)
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<CreateSetFormData>({
     resolver: zodResolver(createSetSchema),
@@ -50,18 +85,76 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
     setDuplicates(results)
   }
 
+  const addImages = useCallback((files: FileList | File[]) => {
+    const fileArray = Array.from(files)
+    const valid: { file: File; preview: string }[] = []
+
+    for (const file of fileArray) {
+      if (!ACCEPTED_TYPES.includes(file.type)) {
+        toast.error(`${file.name}: solo se aceptan JPG y PNG`)
+        continue
+      }
+      if (file.size > MAX_IMAGE_SIZE) {
+        toast.error(`${file.name}: máximo 20 MB por imagen`)
+        continue
+      }
+      valid.push({ file, preview: URL.createObjectURL(file) })
+    }
+
+    setImages((prev) => {
+      const combined = [...prev, ...valid]
+      if (combined.length > MAX_IMAGES) {
+        toast.error(`Máximo ${MAX_IMAGES} imágenes`)
+        return combined.slice(0, MAX_IMAGES)
+      }
+      return combined
+    })
+  }, [])
+
+  const removeImage = useCallback((index: number) => {
+    setImages((prev) => {
+      const updated = [...prev]
+      URL.revokeObjectURL(updated[index].preview)
+      updated.splice(index, 1)
+      return updated
+    })
+  }, [])
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault()
+    setDragOver(false)
+    if (e.dataTransfer.files.length > 0) {
+      addImages(e.dataTransfer.files)
+    }
+  }, [addImages])
+
   async function handleAIParse() {
-    if (!pasteText.trim() || pasteText.trim().length < 10) {
-      toast.error('Pegá al menos un párrafo con información del prospecto')
+    const hasText = pasteText.trim().length >= 10
+    const hasImages = images.length > 0
+
+    if (!hasText && !hasImages) {
+      toast.error('Subí capturas de pantalla o pegá texto con información del prospecto')
       return
     }
 
     setParsing(true)
     try {
+      // Convert images to base64
+      const imageBase64: string[] = []
+      if (hasImages) {
+        for (const img of images) {
+          const b64 = await compressImage(img.file)
+          imageBase64.push(b64)
+        }
+      }
+
       const res = await fetch('/api/parse-set-text', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ text: pasteText }),
+        body: JSON.stringify({
+          text: hasText ? pasteText : undefined,
+          images: imageBase64.length > 0 ? imageBase64 : undefined,
+        }),
       })
 
       if (!res.ok) {
@@ -81,10 +174,14 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
         setServiceKey((k) => k + 1)
       }
 
+      if (parsed.ig_missing) {
+        toast.warning('Instagram no detectado — completalo manualmente en el formulario')
+      }
+
       toast.success('Información extraída — revisá y completá los campos faltantes')
       setActiveTab('manual')
     } catch (e: unknown) {
-      toast.error(e instanceof Error ? e.message : 'Error al analizar el texto')
+      toast.error(e instanceof Error ? e.message : 'Error al analizar')
     } finally {
       setParsing(false)
     }
@@ -98,6 +195,7 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
       reset()
       setDuplicates([])
       setPasteText('')
+      setImages([])
       setActiveTab('manual')
       onOpenChange(false)
       router.refresh()
@@ -119,36 +217,94 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
           <TabsList className="w-full">
             <TabsTrigger value="manual" className="flex-1">Manual</TabsTrigger>
             <TabsTrigger value="paste" className="flex-1 gap-1.5">
-              <ClipboardPaste className="h-3.5 w-3.5" />
-              Pegar texto
+              <Camera className="h-3.5 w-3.5" />
+              IA
             </TabsTrigger>
           </TabsList>
 
           <TabsContent value="paste">
             <div className="space-y-4 pt-2">
+              {/* Image upload area */}
               <div className="space-y-2">
-                <Label>Información del prospecto</Label>
+                <Label>Capturas de la conversación</Label>
+                <div
+                  onDrop={handleDrop}
+                  onDragOver={(e) => { e.preventDefault(); setDragOver(true) }}
+                  onDragLeave={() => setDragOver(false)}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`relative flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-6 cursor-pointer transition-colors ${
+                    dragOver
+                      ? 'border-primary bg-primary/5'
+                      : 'border-border hover:border-muted-foreground/50'
+                  }`}
+                >
+                  <ImagePlus className="h-8 w-8 text-muted-foreground" />
+                  <div className="text-center">
+                    <p className="text-sm font-medium text-muted-foreground">
+                      Arrastrá capturas aquí o hacé clic
+                    </p>
+                    <p className="text-xs text-muted-foreground/70">
+                      JPG o PNG · máx. 20 MB · hasta {MAX_IMAGES} imágenes
+                    </p>
+                  </div>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/jpeg,image/jpg,image/png"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      if (e.target.files) addImages(e.target.files)
+                      e.target.value = ''
+                    }}
+                  />
+                </div>
+
+                {/* Image thumbnails */}
+                {images.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {images.map((img, i) => (
+                      <div key={i} className="relative group">
+                        <img
+                          src={img.preview}
+                          alt={`Captura ${i + 1}`}
+                          className="h-16 w-16 rounded-lg object-cover border border-border"
+                        />
+                        <button
+                          type="button"
+                          onClick={(e) => { e.stopPropagation(); removeImage(i) }}
+                          className="absolute -top-1.5 -right-1.5 h-5 w-5 rounded-full bg-destructive text-destructive-foreground flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Optional text context */}
+              <div className="space-y-2">
+                <Label>Contexto adicional <span className="text-xs text-muted-foreground">(opcional)</span></Label>
                 <Textarea
-                  placeholder="Pegá aquí la información del prospecto (nombre, negocio, situación, redes, etc.)"
+                  placeholder="Información extra que no esté en las capturas (nombre, IG, etc.)"
                   value={pasteText}
                   onChange={(e) => setPasteText(e.target.value)}
-                  rows={8}
+                  rows={3}
                   className="resize-y"
                 />
-                <p className="text-xs text-muted-foreground">
-                  La IA analizará el texto y llenará el formulario automáticamente.
-                </p>
               </div>
+
               <Button
                 type="button"
                 onClick={handleAIParse}
-                disabled={parsing || pasteText.trim().length < 10}
+                disabled={parsing || (pasteText.trim().length < 10 && images.length === 0)}
                 className="w-full gap-2"
               >
                 {parsing ? (
                   <>
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Analizando...
+                    Analizando{images.length > 0 ? ` ${images.length} imagen${images.length > 1 ? 'es' : ''}` : ''}...
                   </>
                 ) : (
                   <>
