@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 const XAI_API_URL = 'https://api.x.ai/v1/chat/completions'
-const XAI_MODEL = 'grok-4-1-fast-reasoning'
+const XAI_MODEL = 'grok-4-1'
 
 const TEXT_SYSTEM_PROMPT = `Sos un asistente que extrae información estructurada de texto sobre prospectos de negocio.
 Dado un bloque de texto con información de un prospecto, extraé los siguientes campos en formato JSON:
@@ -88,33 +88,28 @@ export async function POST(request: Request) {
   try {
     const systemPrompt = hasImages ? IMAGE_SYSTEM_PROMPT : TEXT_SYSTEM_PROMPT
 
-    // Build user content array
-    type ContentPart =
-      | { type: 'input_image'; image_url: string; detail: string }
-      | { type: 'input_text'; text: string }
-
-    const userContent: ContentPart[] = []
+    // Build user message content
+    // For text-only: use plain string (most compatible)
+    // For images: use array with content parts
+    let userMessage: string | Array<Record<string, unknown>>
 
     if (hasImages) {
+      const parts: Array<Record<string, unknown>> = []
       for (const img of images) {
-        userContent.push({
-          type: 'input_image',
-          image_url: img,
-          detail: 'high',
+        parts.push({
+          type: 'image_url',
+          image_url: { url: img, detail: 'high' },
         })
       }
-    }
-
-    if (hasText) {
-      userContent.push({
-        type: 'input_text',
-        text: text.trim(),
+      parts.push({
+        type: 'text',
+        text: hasText
+          ? text.trim()
+          : 'Analizá las capturas de pantalla de la conversación y generá el resumen siguiendo la estructura indicada.',
       })
-    } else if (hasImages) {
-      userContent.push({
-        type: 'input_text',
-        text: 'Analizá las capturas de pantalla de la conversación y generá el resumen siguiendo la estructura indicada.',
-      })
+      userMessage = parts
+    } else {
+      userMessage = text!.trim()
     }
 
     const response = await fetch(XAI_API_URL, {
@@ -127,7 +122,7 @@ export async function POST(request: Request) {
         model: XAI_MODEL,
         messages: [
           { role: 'system', content: systemPrompt },
-          { role: 'user', content: userContent },
+          { role: 'user', content: userMessage },
         ],
         temperature: 0.1,
         max_tokens: 2000,
@@ -142,15 +137,42 @@ export async function POST(request: Request) {
     }
 
     const data = await response.json()
-    const content = data.choices?.[0]?.message?.content
+    const msg = data.choices?.[0]?.message
+    console.log('xAI message keys:', msg ? Object.keys(msg) : 'no message')
+
+    // Try content first, then reasoning_content (for reasoning models)
+    let content = msg?.content
+    if (!content && msg?.reasoning_content) {
+      console.log('Using reasoning_content as fallback')
+      content = msg.reasoning_content
+    }
 
     if (!content) {
+      console.error('xAI content is empty. Full data:', JSON.stringify(data).slice(0, 2000))
       return NextResponse.json({ error: 'Respuesta vacía de IA' }, { status: 502 })
     }
 
+    console.log('xAI content (first 1000 chars):', content.slice(0, 1000))
+
     // Clean potential markdown wrapping from response
     const cleanContent = content.replace(/```json\s*/g, '').replace(/```\s*/g, '').trim()
-    const parsed = JSON.parse(cleanContent)
+
+    // For reasoning models, the JSON might be at the end after thinking text
+    // Try to extract JSON object from the content
+    let parsed: Record<string, unknown>
+    try {
+      parsed = JSON.parse(cleanContent)
+    } catch {
+      // If direct parse fails, try to find JSON object in the content
+      const jsonMatch = cleanContent.match(/\{[\s\S]*\}/)
+      if (jsonMatch) {
+        console.log('Extracted JSON from content:', jsonMatch[0].slice(0, 500))
+        parsed = JSON.parse(jsonMatch[0])
+      } else {
+        throw new Error('No JSON found in AI response')
+      }
+    }
+    console.log('parsed result:', JSON.stringify(parsed))
 
     const igValue = parsed.prospect_ig || ''
 
