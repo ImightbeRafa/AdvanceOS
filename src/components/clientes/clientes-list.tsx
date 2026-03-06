@@ -181,14 +181,14 @@ export function ClientesList({ clients, paymentsByClient, revenueByDeal, phasesB
       filters={
         <>
           <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-36 h-9"><SelectValue placeholder="Estado" /></SelectTrigger>
+            <SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-36 h-9"><SelectValue placeholder="Estado" /></SelectTrigger>
             <SelectContent className="bg-surface-2">
               <SelectItem value="all">Todos</SelectItem>
               {Object.entries(CLIENT_STATUS_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
             </SelectContent>
           </Select>
           <Select value={serviceFilter} onValueChange={setServiceFilter}>
-            <SelectTrigger className="w-36 h-9"><SelectValue placeholder="Servicio" /></SelectTrigger>
+            <SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-36 h-9"><SelectValue placeholder="Servicio" /></SelectTrigger>
             <SelectContent className="bg-surface-2">
               <SelectItem value="all">Todos</SelectItem>
               {Object.entries(SERVICE_LABELS).map(([k, v]) => <SelectItem key={k} value={k}>{v}</SelectItem>)}
@@ -196,7 +196,7 @@ export function ClientesList({ clients, paymentsByClient, revenueByDeal, phasesB
           </Select>
           {allFaseNames.length > 0 && (
             <Select value={faseFilter} onValueChange={setFaseFilter}>
-              <SelectTrigger className="w-44 h-9"><SelectValue placeholder="Fase" /></SelectTrigger>
+              <SelectTrigger className="w-full sm:w-44 h-9"><SelectValue placeholder="Fase" /></SelectTrigger>
               <SelectContent className="bg-surface-2">
                 <SelectItem value="all">Todas las fases</SelectItem>
                 {allFaseNames.map((name) => <SelectItem key={name} value={name}>{name}</SelectItem>)}
@@ -204,7 +204,7 @@ export function ClientesList({ clients, paymentsByClient, revenueByDeal, phasesB
             </Select>
           )}
           <Select value={pagosPendientesFilter} onValueChange={setPagosPendientesFilter}>
-            <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Pagos" /></SelectTrigger>
+            <SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-40 h-9"><SelectValue placeholder="Pagos" /></SelectTrigger>
             <SelectContent className="bg-surface-2">
               <SelectItem value="all">Todos</SelectItem>
               <SelectItem value="si">Con saldo</SelectItem>

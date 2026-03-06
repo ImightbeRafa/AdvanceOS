@@ -63,7 +63,7 @@ export function EditTeamMemberModal({ member, open, onOpenChange }: EditTeamMemb
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-surface-2 border-border max-w-md">
+      <DialogContent className="bg-surface-2 border-border max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Editar miembro</DialogTitle>
         </DialogHeader>

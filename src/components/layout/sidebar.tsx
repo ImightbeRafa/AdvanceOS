@@ -20,6 +20,7 @@ import { NAV_ITEMS } from '@/lib/constants'
 import type { UserRole } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip'
+import { X } from 'lucide-react'
 const ICON_MAP: Record<string, React.ComponentType<{ className?: string }>> = {
   LayoutDashboard,
   Target,
@@ -35,34 +36,38 @@ interface SidebarProps {
   role: UserRole
   collapsed: boolean
   onToggle: () => void
+  mobileOpen?: boolean
+  onMobileClose?: () => void
 }
 
-export function Sidebar({ role, collapsed, onToggle }: SidebarProps) {
+export function Sidebar({ role, collapsed, onToggle, mobileOpen, onMobileClose }: SidebarProps) {
   const pathname = usePathname()
 
   const filteredItems = NAV_ITEMS.filter((item) =>
     item.roles.includes(role)
   )
 
-  return (
-    <aside
-      className={cn(
-        'fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-200',
-        collapsed ? 'w-16' : 'w-56'
-      )}
-    >
+  const navContent = (
+    <>
       <div className={cn(
         'flex h-14 items-center border-b border-sidebar-border px-3',
-        collapsed ? 'justify-center' : 'gap-2'
+        collapsed ? 'md:justify-center' : 'gap-2'
       )}>
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10">
           <Zap className="h-4 w-4 text-primary" />
         </div>
-        {!collapsed && (
-          <span className="text-sm font-semibold text-sidebar-foreground">
-            AdvanceOS
-          </span>
-        )}
+        <span className={cn('text-sm font-semibold text-sidebar-foreground', collapsed && 'md:hidden')}>
+          AdvanceOS
+        </span>
+        {/* Close button visible only on mobile */}
+        <Button
+          variant="ghost"
+          size="icon"
+          className="ml-auto md:hidden text-sidebar-foreground/50 hover:text-sidebar-foreground"
+          onClick={onMobileClose}
+        >
+          <X className="h-5 w-5" />
+        </Button>
       </div>
 
       <nav className="flex-1 space-y-1 overflow-y-auto p-2 scrollbar-thin">
@@ -77,6 +82,7 @@ export function Sidebar({ role, collapsed, onToggle }: SidebarProps) {
             <Link
               key={item.href}
               href={item.href}
+              onClick={onMobileClose}
               className={cn(
                 'flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
                 isActive
@@ -85,14 +91,17 @@ export function Sidebar({ role, collapsed, onToggle }: SidebarProps) {
               )}
             >
               {Icon && <Icon className="h-4 w-4 shrink-0" />}
-              {!collapsed && <span>{item.label}</span>}
+              {!collapsed && <span className="md:inline">{item.label}</span>}
+              {collapsed && <span className="md:hidden">{item.label}</span>}
             </Link>
           )
 
           if (collapsed) {
             return (
               <Tooltip key={item.href} delayDuration={0}>
-                <TooltipTrigger asChild>{link}</TooltipTrigger>
+                <TooltipTrigger asChild>
+                  <span className="hidden md:block">{link}</span>
+                </TooltipTrigger>
                 <TooltipContent side="right" className="bg-surface-2">
                   {item.label}
                 </TooltipContent>
@@ -104,7 +113,7 @@ export function Sidebar({ role, collapsed, onToggle }: SidebarProps) {
         })}
       </nav>
 
-      <div className="border-t border-sidebar-border p-2">
+      <div className="border-t border-sidebar-border p-2 hidden md:block">
         <Button
           variant="ghost"
           size="sm"
@@ -121,6 +130,30 @@ export function Sidebar({ role, collapsed, onToggle }: SidebarProps) {
           )}
         </Button>
       </div>
-    </aside>
+    </>
+  )
+
+  return (
+    <>
+      {/* Desktop sidebar */}
+      <aside
+        className={cn(
+          'fixed left-0 top-0 z-40 hidden md:flex h-screen flex-col border-r border-sidebar-border bg-sidebar transition-all duration-200',
+          collapsed ? 'w-16' : 'w-56'
+        )}
+      >
+        {navContent}
+      </aside>
+
+      {/* Mobile sidebar overlay */}
+      {mobileOpen && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          <div className="fixed inset-0 bg-black/50" onClick={onMobileClose} />
+          <aside className="fixed left-0 top-0 z-50 flex h-screen w-64 flex-col border-r border-sidebar-border bg-sidebar animate-in slide-in-from-left duration-200">
+            {navContent}
+          </aside>
+        </div>
+      )}
+    </>
   )
 }

@@ -278,7 +278,7 @@ export function AccountingDashboard({ summary: initialSummary, expenses, adSpend
         </div>
       </div>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-3 grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
         <div className="rounded-xl border border-border bg-surface-1 p-4">
           <div className="flex items-center gap-2"><Users className="h-4 w-4 text-muted-foreground" /><span className="text-sm text-muted-foreground">Comisiones</span></div>
           <p className="mt-1 text-xl font-bold">{fmt(summary.totalCommissions)}</p>
@@ -409,16 +409,16 @@ export function AccountingDashboard({ summary: initialSummary, expenses, adSpend
         ) : (
           <div className="space-y-2">
             {manualTransactions.slice(0, 10).map((t) => (
-              <div key={t.id} className="flex items-center gap-3 text-sm">
+              <div key={t.id} className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
                 <StatusChip
                   label={t.type === 'ingreso' ? 'Ingreso' : 'Egreso'}
                   colorClass={t.type === 'ingreso' ? 'bg-success/10 text-success' : 'bg-destructive/10 text-destructive'}
                 />
-                <span className="flex-1">{t.description}</span>
-                <span className={`font-medium ${t.type === 'ingreso' ? 'text-success' : 'text-destructive'}`}>
+                <span className="flex-1 min-w-0 truncate">{t.description}</span>
+                <span className={`font-medium whitespace-nowrap ${t.type === 'ingreso' ? 'text-success' : 'text-destructive'}`}>
                   {t.type === 'ingreso' ? '+' : '-'}{fmt(t.amount_usd)}
                 </span>
-                <span className="text-xs text-muted-foreground">{formatDate(t.date)}</span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(t.date)}</span>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -441,11 +441,11 @@ export function AccountingDashboard({ summary: initialSummary, expenses, adSpend
         ) : (
           <div className="space-y-2">
             {expenses.slice(0, 10).map((e) => (
-              <div key={e.id} className="flex items-center gap-3 text-sm">
+              <div key={e.id} className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
                 <StatusChip label={e.category} colorClass="bg-muted text-muted-foreground" />
-                <span className="flex-1">{e.description}</span>
-                <span className="font-medium">{fmt(e.amount_usd)}</span>
-                <span className="text-xs text-muted-foreground">{formatDate(e.date)}</span>
+                <span className="flex-1 min-w-0 truncate">{e.description}</span>
+                <span className="font-medium whitespace-nowrap">{fmt(e.amount_usd)}</span>
+                <span className="text-xs text-muted-foreground whitespace-nowrap">{formatDate(e.date)}</span>
                 <Button
                   size="sm"
                   variant="ghost"
@@ -467,12 +467,12 @@ export function AccountingDashboard({ summary: initialSummary, expenses, adSpend
         ) : (
           <div className="space-y-2">
             {adSpends.slice(0, 10).map((a) => (
-              <div key={a.id} className="flex items-center gap-3 text-sm">
+              <div key={a.id} className="flex flex-wrap items-center gap-2 sm:gap-3 text-sm">
                 <StatusChip label={a.platform} colorClass="bg-muted text-muted-foreground" />
-                <span className="flex-1 text-muted-foreground text-xs">
+                <span className="flex-1 min-w-0 text-muted-foreground text-xs truncate">
                   {formatDate(a.period_start)} — {formatDate(a.period_end)}
                 </span>
-                <span className="font-medium">{fmt(a.amount_usd)}</span>
+                <span className="font-medium whitespace-nowrap">{fmt(a.amount_usd)}</span>
                 <Button
                   size="sm"
                   variant="ghost"

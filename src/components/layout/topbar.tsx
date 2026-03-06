@@ -9,6 +9,7 @@ import {
   LogOut,
   User,
   CheckCheck,
+  Menu,
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { markNotificationRead, markAllNotificationsRead } from '@/lib/actions/notifications'
@@ -30,9 +31,10 @@ import type { Profile, Notification } from '@/types'
 interface TopBarProps {
   profile: Profile
   collapsed: boolean
+  onMobileMenuToggle?: () => void
 }
 
-export function TopBar({ profile, collapsed }: TopBarProps) {
+export function TopBar({ profile, collapsed, onMobileMenuToggle }: TopBarProps) {
   const router = useRouter()
   const [isPending, startTransition] = useTransition()
   const supabase = createClient()
@@ -76,15 +78,23 @@ export function TopBar({ profile, collapsed }: TopBarProps) {
     >
       <div className="flex items-center gap-2">
         <Button
+          variant="ghost"
+          size="icon"
+          className="md:hidden"
+          onClick={onMobileMenuToggle}
+        >
+          <Menu className="h-5 w-5" />
+        </Button>
+        <Button
           variant="outline"
           size="sm"
-          className="h-9 w-64 justify-start gap-2 text-muted-foreground"
+          className="h-9 w-9 justify-center sm:w-64 sm:justify-start gap-2 text-muted-foreground"
           onClick={() => {
             document.dispatchEvent(new KeyboardEvent('keydown', { key: 'k', metaKey: true }))
           }}
         >
           <Search className="h-4 w-4" />
-          <span className="text-sm">Buscar...</span>
+          <span className="text-sm hidden sm:inline">Buscar...</span>
           <kbd className="ml-auto pointer-events-none hidden h-5 select-none items-center gap-1 rounded border border-border bg-muted px-1.5 font-mono text-[10px] text-muted-foreground sm:flex">
             Ctrl+K
           </kbd>

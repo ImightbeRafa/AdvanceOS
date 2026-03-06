@@ -255,7 +255,7 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
                   {expandedMembers[group.memberId] && (
                     <div className="bg-surface-2/50 border-t border-border">
                       {group.commissions.map((c) => (
-                        <div key={c.id} className="flex items-center justify-between px-4 pl-12 py-3 text-sm border-b border-border last:border-b-0">
+                        <div key={c.id} className="flex flex-wrap items-center justify-between px-4 pl-8 sm:pl-12 py-3 text-sm border-b border-border last:border-b-0 gap-2">
                           <div className="flex flex-col gap-0.5">
                             <div className="flex items-center gap-2">
                               <StatusChip
@@ -330,7 +330,7 @@ export function PlanillaDashboard({ unpaidCommissions, salaryPayments }: Planill
             ) : (
               <div className="divide-y divide-border">
                 {salaryPayments.map((s) => (
-                  <div key={s.id} className="flex items-center justify-between p-4 text-sm">
+                  <div key={s.id} className="flex flex-wrap items-center justify-between p-4 text-sm gap-2">
                     <div className="flex flex-col gap-0.5">
                       <span className="font-medium">{s.team_member?.full_name ?? 'Desconocido'}</span>
                       <span className="text-xs text-muted-foreground">{s.period_label}</span>

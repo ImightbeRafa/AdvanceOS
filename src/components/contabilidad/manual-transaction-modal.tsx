@@ -49,7 +49,7 @@ export function ManualTransactionModal({ open, onOpenChange }: ManualTransaction
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-surface-2 border-border max-w-md">
+      <DialogContent className="bg-surface-2 border-border max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Registrar movimiento manual</DialogTitle>
         </DialogHeader>

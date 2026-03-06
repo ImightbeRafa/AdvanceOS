@@ -57,7 +57,7 @@ export function InviteMemberModal({ open, onOpenChange, onLinkGenerated }: Invit
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-surface-2 border-border max-w-md">
+      <DialogContent className="bg-surface-2 border-border max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>Invitar miembro</DialogTitle>
           <DialogDescription>

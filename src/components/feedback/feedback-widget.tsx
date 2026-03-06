@@ -81,7 +81,7 @@ export function FeedbackWidget() {
       </Tooltip>
 
       <Dialog open={open} onOpenChange={handleOpenChange}>
-        <DialogContent className="bg-surface-2 border-border max-w-md">
+        <DialogContent className="bg-surface-2 border-border max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Enviar feedback</DialogTitle>
             <DialogDescription>

@@ -86,48 +86,54 @@ export function ClientProfile({
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center gap-3">
-        <Button variant="ghost" size="icon" onClick={() => router.push('/clientes')}>
-          <ArrowLeft className="h-4 w-4" />
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-2xl font-bold tracking-tight">{client.business_name}</h1>
-          <div className="flex items-center gap-2 mt-1">
-            <StatusChip label={CLIENT_STATUS_LABELS[client.status]} colorClass={CLIENT_STATUS_COLORS[client.status]} />
-            <span className="text-sm text-muted-foreground">{SERVICE_LABELS[client.service as keyof typeof SERVICE_LABELS]}</span>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <Button variant="ghost" size="icon" onClick={() => router.push('/clientes')}>
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight truncate">{client.business_name}</h1>
+            <div className="flex items-center gap-2 mt-1">
+              <StatusChip label={CLIENT_STATUS_LABELS[client.status]} colorClass={CLIENT_STATUS_COLORS[client.status]} />
+              <span className="text-sm text-muted-foreground">{SERVICE_LABELS[client.service as keyof typeof SERVICE_LABELS]}</span>
+            </div>
           </div>
         </div>
-        <Select defaultValue={client.status} onValueChange={handleStatusChange}>
-          <SelectTrigger className="w-40">
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent className="bg-surface-2">
-            <SelectItem value="onboarding">Onboarding</SelectItem>
-            <SelectItem value="activo">Activo</SelectItem>
-            <SelectItem value="pausado">Pausado</SelectItem>
-            <SelectItem value="completado">Completado</SelectItem>
-          </SelectContent>
-        </Select>
-        {userRole === 'admin' && (
-          <Button variant="destructive" size="sm" onClick={handleDeleteClient}>
-            <Trash2 className="h-3.5 w-3.5 mr-1.5" />
-            Eliminar
-          </Button>
-        )}
+        <div className="flex items-center gap-2">
+          <Select defaultValue={client.status} onValueChange={handleStatusChange}>
+            <SelectTrigger className="w-36 sm:w-40">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent className="bg-surface-2">
+              <SelectItem value="onboarding">Onboarding</SelectItem>
+              <SelectItem value="activo">Activo</SelectItem>
+              <SelectItem value="pausado">Pausado</SelectItem>
+              <SelectItem value="completado">Completado</SelectItem>
+            </SelectContent>
+          </Select>
+          {userRole === 'admin' && (
+            <Button variant="destructive" size="sm" onClick={handleDeleteClient}>
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              Eliminar
+            </Button>
+          )}
+        </div>
       </div>
 
       <Tabs defaultValue="overview">
-        <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
-          <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
-          <TabsTrigger value="formulario">Formulario</TabsTrigger>
-          <TabsTrigger value="assets">Assets</TabsTrigger>
-          <TabsTrigger value="medicion">Ventas & Medición</TabsTrigger>
-          {(userRole === 'admin' || userRole === 'closer') && (
-            <TabsTrigger value="pagos">Pagos</TabsTrigger>
-          )}
-          <TabsTrigger value="actividad">Actividad</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList className="w-max md:w-auto">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="onboarding">Onboarding</TabsTrigger>
+            <TabsTrigger value="formulario">Formulario</TabsTrigger>
+            <TabsTrigger value="assets">Assets</TabsTrigger>
+            <TabsTrigger value="medicion">Ventas & Medición</TabsTrigger>
+            {(userRole === 'admin' || userRole === 'closer') && (
+              <TabsTrigger value="pagos">Pagos</TabsTrigger>
+            )}
+            <TabsTrigger value="actividad">Actividad</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="overview" className="mt-4 space-y-4">
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">

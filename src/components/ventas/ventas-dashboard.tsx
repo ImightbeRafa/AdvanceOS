@@ -315,43 +315,43 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
   ]
 
   const filterBar = (
-    <div className="flex flex-wrap items-center gap-2">
+    <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
       <Select value={statusFilter} onValueChange={setStatusFilter}>
-        <SelectTrigger className="w-44 h-9"><SelectValue placeholder="Estado" /></SelectTrigger>
+        <SelectTrigger className="w-full sm:w-44 h-9"><SelectValue placeholder="Estado" /></SelectTrigger>
         <SelectContent className="bg-surface-2">
           <SelectItem value="all">Todos los estados</SelectItem>
           {Object.entries(SET_STATUS_LABELS).map(([key, label]) => <SelectItem key={key} value={key}>{label}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={closerFilter} onValueChange={setCloserFilter}>
-        <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Closer" /></SelectTrigger>
+        <SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-40 h-9"><SelectValue placeholder="Closer" /></SelectTrigger>
         <SelectContent className="bg-surface-2">
           <SelectItem value="all">Todos los closers</SelectItem>
           {closers.map((c) => <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={setterFilter} onValueChange={setSetterFilter}>
-        <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Setter" /></SelectTrigger>
+        <SelectTrigger className="w-[calc(50%-0.25rem)] sm:w-40 h-9"><SelectValue placeholder="Setter" /></SelectTrigger>
         <SelectContent className="bg-surface-2">
           <SelectItem value="all">Todos los setters</SelectItem>
           {setters.map((s) => <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>)}
         </SelectContent>
       </Select>
       <Select value={serviceFilter} onValueChange={setServiceFilter}>
-        <SelectTrigger className="w-40 h-9"><SelectValue placeholder="Servicio" /></SelectTrigger>
+        <SelectTrigger className="w-full sm:w-40 h-9"><SelectValue placeholder="Servicio" /></SelectTrigger>
         <SelectContent className="bg-surface-2">
           <SelectItem value="all">Todos los servicios</SelectItem>
           <SelectItem value="advance90">Advance90</SelectItem>
           <SelectItem value="meta_advance">Meta Advance</SelectItem>
         </SelectContent>
       </Select>
-      <div className="flex items-center gap-1.5">
+      <div className="flex items-center gap-1.5 w-full sm:w-auto">
         <CalendarRange className="h-4 w-4 text-muted-foreground shrink-0" />
-        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 w-36 text-xs" />
+        <Input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className="h-9 flex-1 sm:w-36 sm:flex-none text-xs" />
         <span className="text-muted-foreground text-xs">—</span>
-        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 w-36 text-xs" />
+        <Input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className="h-9 flex-1 sm:w-36 sm:flex-none text-xs" />
       </div>
-      <div className="flex items-center gap-1 ml-auto">
+      <div className="flex items-center gap-1 w-full sm:w-auto sm:ml-auto">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" size="sm" className="gap-1 text-xs"><Bookmark className="h-3 w-3" />Filtros</Button>
@@ -391,12 +391,14 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
 
       {/* Tabs */}
       <Tabs defaultValue="setting">
-        <TabsList variant="line">
-          <TabsTrigger value="setting">Setting</TabsTrigger>
-          <TabsTrigger value="closing">Closing</TabsTrigger>
-          <TabsTrigger value="pendientes">Pendientes</TabsTrigger>
-          <TabsTrigger value="estadisticas">Estadísticas</TabsTrigger>
-        </TabsList>
+        <div className="overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+          <TabsList variant="line" className="w-max md:w-auto">
+            <TabsTrigger value="setting">Setting</TabsTrigger>
+            <TabsTrigger value="closing">Closing</TabsTrigger>
+            <TabsTrigger value="pendientes">Pendientes</TabsTrigger>
+            <TabsTrigger value="estadisticas">Estadísticas</TabsTrigger>
+          </TabsList>
+        </div>
 
         <TabsContent value="setting">
           <DataTable

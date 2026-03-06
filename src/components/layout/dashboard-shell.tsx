@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useCallback } from 'react'
 import dynamic from 'next/dynamic'
 import { Sidebar } from './sidebar'
 import { TopBar } from './topbar'
@@ -17,18 +17,28 @@ interface DashboardShellProps {
 
 export function DashboardShell({ children, profile }: DashboardShellProps) {
   const [collapsed, setCollapsed] = useState(false)
+  const [mobileOpen, setMobileOpen] = useState(false)
+
+  const closeMobile = useCallback(() => setMobileOpen(false), [])
 
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar role={profile.role} collapsed={collapsed} onToggle={() => setCollapsed(c => !c)} />
+      <Sidebar
+        role={profile.role}
+        collapsed={collapsed}
+        onToggle={() => setCollapsed(c => !c)}
+        mobileOpen={mobileOpen}
+        onMobileClose={closeMobile}
+      />
       <div
         className={cn(
           'transition-all duration-200',
-          collapsed ? 'ml-16' : 'ml-56'
+          'md:ml-56',
+          collapsed ? 'md:ml-16' : 'md:ml-56'
         )}
       >
-        <TopBar profile={profile} collapsed={collapsed} />
-        <main className="p-6">{children}</main>
+        <TopBar profile={profile} collapsed={collapsed} onMobileMenuToggle={() => setMobileOpen(o => !o)} />
+        <main className="p-4 md:p-6">{children}</main>
       </div>
       <GlobalSearch />
       <FeedbackWidget />

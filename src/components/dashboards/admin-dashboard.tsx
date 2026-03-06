@@ -130,7 +130,7 @@ export function AdminDashboard({ profile, sets, accounting, paymentsBySet }: Adm
 
       <div className="grid gap-4 lg:grid-cols-2">
         <div className="rounded-xl border border-border bg-surface-1 p-4">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
             <h3 className="text-sm font-medium">{CALL_RANGE_TITLES[callRange]}</h3>
             <div className="flex items-center gap-2">
               <div className="flex gap-1">

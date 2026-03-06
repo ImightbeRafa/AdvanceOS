@@ -68,7 +68,7 @@ export function ExpenseModal({ open, onOpenChange, expense }: ExpenseModalProps)
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-surface-2 border-border max-w-md">
+      <DialogContent className="bg-surface-2 border-border max-w-md max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>{isEditing ? 'Editar gasto' : 'Registrar gasto'}</DialogTitle>
         </DialogHeader>

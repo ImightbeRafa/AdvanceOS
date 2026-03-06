@@ -106,6 +106,7 @@ export function DataTable<T extends { id: string }>({
       </div>
 
       <div className="rounded-lg border border-border bg-surface-1 overflow-hidden">
+        <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow className="hover:bg-transparent border-border">
@@ -175,6 +176,7 @@ export function DataTable<T extends { id: string }>({
             )}
           </TableBody>
         </Table>
+        </div>
       </div>
 
       <p className="text-xs text-muted-foreground">
