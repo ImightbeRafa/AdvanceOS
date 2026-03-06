@@ -71,6 +71,7 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
   const [duplicates, setDuplicates] = useState<{ id: string; prospect_name: string; status: string }[]>([])
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
+  const [pendingParsed, setPendingParsed] = useState<Record<string, unknown> | null>(null)
 
   const { register, handleSubmit, setValue, watch, reset, control, formState: { errors } } = useForm<CreateSetFormData>({
     resolver: zodResolver(createSetSchema),
@@ -83,6 +84,25 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
       setValue('closer_id', closers[0].id, { shouldValidate: true })
     }
   }, [closers, setValue])
+
+  useEffect(() => {
+    if (!pendingParsed || activeTab !== 'manual') return
+
+    const p = pendingParsed
+    setPendingParsed(null)
+
+    if (p.prospect_name) setValue('prospect_name', p.prospect_name as string, { shouldValidate: true })
+    if (p.prospect_whatsapp) setValue('prospect_whatsapp', p.prospect_whatsapp as string, { shouldValidate: true })
+    if (p.prospect_ig) setValue('prospect_ig', p.prospect_ig as string, { shouldValidate: true })
+    if (p.prospect_web) setValue('prospect_web', p.prospect_web as string, { shouldValidate: true })
+    if (p.summary) setValue('summary', p.summary as string, { shouldValidate: true })
+    if (p.service_offered === 'advance90' || p.service_offered === 'meta_advance') {
+      setValue('service_offered', p.service_offered, { shouldValidate: true })
+    }
+    if (p._closerId) {
+      setValue('closer_id', p._closerId as string, { shouldValidate: true })
+    }
+  }, [pendingParsed, activeTab, setValue])
 
   async function handleIGBlur() {
     if (!igValue || igValue.length < 2) return
@@ -179,26 +199,12 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
       }
       if (!closerId && closers.length === 1) closerId = closers[0].id
 
-      const serviceValue = (parsed.service_offered === 'advance90' || parsed.service_offered === 'meta_advance')
-        ? parsed.service_offered
-        : undefined
-
-      reset({
-        prospect_name: parsed.prospect_name || '',
-        prospect_whatsapp: parsed.prospect_whatsapp || '',
-        prospect_ig: parsed.prospect_ig || '',
-        prospect_web: parsed.prospect_web || '',
-        summary: parsed.summary || '',
-        service_offered: serviceValue as 'advance90' | 'meta_advance' | undefined,
-        closer_id: closerId || '',
-        scheduled_at: '',
-      } as CreateSetFormData)
-
       if (parsed.ig_missing) {
         toast.warning('Instagram no detectado — completalo manualmente en el formulario')
       }
 
       toast.success('Información extraída — revisá y completá los campos faltantes')
+      setPendingParsed({ ...parsed, _closerId: closerId })
       setActiveTab('manual')
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error al analizar')
