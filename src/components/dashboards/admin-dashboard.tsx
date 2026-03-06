@@ -66,11 +66,11 @@ export function AdminDashboard({ profile, sets, accounting, paymentsBySet }: Adm
     const filter = callRange === 'hoy' ? isDateToday
       : callRange === 'semana' ? isDateInWeek
       : isDateInMonth
-    return allPendingSets.filter((s) => filter(s.scheduled_at))
+    return allPendingSets.filter((s) => s.scheduled_at && filter(s.scheduled_at))
   }, [allPendingSets, callRange])
 
   const pendingCallsTodayCount = useMemo(() =>
-    allPendingSets.filter((s) => isDateToday(s.scheduled_at)).length,
+    allPendingSets.filter((s) => s.scheduled_at && isDateToday(s.scheduled_at)).length,
     [allPendingSets]
   )
 
@@ -157,7 +157,7 @@ export function AdminDashboard({ profile, sets, accounting, paymentsBySet }: Adm
                 <Link key={s.id} href="/ventas" className="flex items-center justify-between text-sm hover:bg-surface-2 rounded-lg p-2 -mx-2 transition-colors">
                   <div>
                     <span className="font-medium">{s.prospect_name}</span>
-                    <p className="text-xs text-muted-foreground">{formatDateTime(s.scheduled_at)}</p>
+                    <p className="text-xs text-muted-foreground">{s.scheduled_at ? formatDateTime(s.scheduled_at) : 'Sin agendar'}</p>
                   </div>
                   <StatusChip label={SET_STATUS_LABELS[s.status]} colorClass={SET_STATUS_COLORS[s.status]} />
                 </Link>

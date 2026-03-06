@@ -130,15 +130,19 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers, paymentsBySe
             <h4 className="text-sm font-medium">Prospecto</h4>
             <div className="grid grid-cols-2 gap-2 text-sm">
               <span className="text-muted-foreground">WhatsApp</span>
-              <a
-                href={`https://wa.me/${set.prospect_whatsapp.replace(/\D/g, '')}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline flex items-center gap-1"
-              >
-                <MessageCircle className="h-3 w-3" />
-                {set.prospect_whatsapp}
-              </a>
+              {set.prospect_whatsapp ? (
+                <a
+                  href={`https://wa.me/${set.prospect_whatsapp.replace(/\D/g, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center gap-1"
+                >
+                  <MessageCircle className="h-3 w-3" />
+                  {set.prospect_whatsapp}
+                </a>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
 
               <span className="text-muted-foreground">Instagram</span>
               <a
@@ -177,7 +181,7 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers, paymentsBySe
               <span className="text-muted-foreground">Closer</span>
               <span>{closer?.full_name ?? '—'}</span>
               <span className="text-muted-foreground">Fecha llamada</span>
-              <span>{formatDateTime(set.scheduled_at)}</span>
+              <span>{set.scheduled_at ? formatDateTime(set.scheduled_at) : 'Sin agendar'}</span>
             </div>
           </div>
 

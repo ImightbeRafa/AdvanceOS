@@ -116,7 +116,7 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
   const monthStart = useMemo(() => monthStartCR(), [])
 
   const setsAgendadosMTD = useMemo(() =>
-    sets.filter((s) => toCR(s.scheduled_at).toISOString().split('T')[0] >= monthStart),
+    sets.filter((s) => s.scheduled_at && toCR(s.scheduled_at).toISOString().split('T')[0] >= monthStart),
     [sets, monthStart]
   )
 
@@ -183,11 +183,11 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
     if (serviceFilter !== 'all') result = result.filter((s) => s.service_offered === serviceFilter)
     if (dateFrom) {
       const from = new TZDate(`${dateFrom}T00:00:00`, CR_TZ)
-      result = result.filter((s) => toCR(s.scheduled_at) >= from)
+      result = result.filter((s) => s.scheduled_at && toCR(s.scheduled_at) >= from)
     }
     if (dateTo) {
       const to = new TZDate(`${dateTo}T23:59:59.999`, CR_TZ)
-      result = result.filter((s) => toCR(s.scheduled_at) <= to)
+      result = result.filter((s) => s.scheduled_at && toCR(s.scheduled_at) <= to)
     }
     return result
   }, [sets, statusFilter, closerFilter, setterFilter, serviceFilter, dateFrom, dateTo])
@@ -212,7 +212,7 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
 
   // --- Pendientes data ---
   const pendingCallsToday = useMemo(() =>
-    sets.filter((s) => ['agendado', 'precall_enviado'].includes(s.status) && isDateToday(s.scheduled_at)),
+    sets.filter((s) => ['agendado', 'precall_enviado'].includes(s.status) && s.scheduled_at && isDateToday(s.scheduled_at)),
     [sets]
   )
 
@@ -222,6 +222,7 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
     next7.setDate(next7.getDate() + 7)
     return sets.filter((s) => {
       if (!['agendado', 'precall_enviado'].includes(s.status)) return false
+      if (!s.scheduled_at) return false
       const d = toCR(s.scheduled_at)
       return d > todayCR && d <= next7
     })
@@ -283,7 +284,7 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
     { key: 'service', label: 'Servicio', render: (s) => <span className="text-sm text-muted-foreground">{SERVICE_LABELS[s.service_offered]}</span> },
     { key: 'closer', label: 'Closer', render: (s) => <span className="text-sm">{(s.closer as unknown as Profile)?.full_name ?? '—'}</span> },
     { key: 'setter', label: 'Setter', render: (s) => <span className="text-sm">{(s.setter as unknown as Profile)?.full_name ?? '—'}</span> },
-    { key: 'scheduled', label: 'Fecha llamada', sortable: true, render: (s) => <span className="text-sm text-muted-foreground">{formatDateTime(s.scheduled_at)}</span>, getValue: (s) => new Date(s.scheduled_at).getTime() },
+    { key: 'scheduled', label: 'Fecha llamada', sortable: true, render: (s) => <span className="text-sm text-muted-foreground">{s.scheduled_at ? formatDateTime(s.scheduled_at) : 'Sin agendar'}</span>, getValue: (s) => s.scheduled_at ? new Date(s.scheduled_at).getTime() : 0 },
     { key: 'ig', label: 'IG', render: (s) => (
       <a href={`https://instagram.com/${s.prospect_ig}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline" onClick={(e) => e.stopPropagation()}>@{s.prospect_ig}</a>
     ) },
@@ -462,13 +463,13 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
               <div className="space-y-4">
                 <Section title="Hoy" items={pendingCallsToday} emptyText="Sin llamadas para hoy." renderItem={(s) => (
                   <button key={s.id} onClick={() => setSelectedSet(s)} className="flex w-full items-center justify-between rounded-lg p-3 text-left hover:bg-surface-2 transition-colors">
-                    <div><p className="text-sm font-medium">{s.prospect_name}</p><p className="text-xs text-muted-foreground">{formatDateTime(s.scheduled_at)}</p></div>
+                    <div><p className="text-sm font-medium">{s.prospect_name}</p><p className="text-xs text-muted-foreground">{s.scheduled_at ? formatDateTime(s.scheduled_at) : 'Sin agendar'}</p></div>
                     <StatusChip label={SET_STATUS_LABELS[s.status]} colorClass={SET_STATUS_COLORS[s.status]} size="sm" />
                   </button>
                 )} />
                 <Section title="Próximos 7 días" items={pendingCallsNext7} emptyText="Sin llamadas próximas." renderItem={(s) => (
                   <button key={s.id} onClick={() => setSelectedSet(s)} className="flex w-full items-center justify-between rounded-lg p-3 text-left hover:bg-surface-2 transition-colors">
-                    <div><p className="text-sm font-medium">{s.prospect_name}</p><p className="text-xs text-muted-foreground">{formatDateTime(s.scheduled_at)}</p></div>
+                    <div><p className="text-sm font-medium">{s.prospect_name}</p><p className="text-xs text-muted-foreground">{s.scheduled_at ? formatDateTime(s.scheduled_at) : 'Sin agendar'}</p></div>
                     <StatusChip label={SET_STATUS_LABELS[s.status]} colorClass={SET_STATUS_COLORS[s.status]} size="sm" />
                   </button>
                 )} />

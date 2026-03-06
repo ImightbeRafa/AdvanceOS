@@ -17,7 +17,7 @@ interface SetterDashboardProps {
 
 export function SetterDashboard({ profile, sets, commissionsTotal }: SetterDashboardProps) {
   const mySets = sets.filter((s) => s.setter_id === profile.id)
-  const todaySets = mySets.filter((s) => isDateToday(s.scheduled_at) && ['agendado', 'precall_enviado'].includes(s.status))
+  const todaySets = mySets.filter((s) => s.scheduled_at && isDateToday(s.scheduled_at) && ['agendado', 'precall_enviado'].includes(s.status))
   const pendingSets = mySets.filter((s) => !['closed', 'descalificado'].includes(s.status))
   const closedSets = mySets.filter((s) => ['closed', 'closed_pendiente'].includes(s.status))
 
@@ -73,7 +73,7 @@ export function SetterDashboard({ profile, sets, commissionsTotal }: SetterDashb
               <div className="flex items-center justify-between">
                 <div>
                   <span className="font-medium">{s.prospect_name}</span>
-                  <p className="text-sm text-muted-foreground">{formatDateTime(s.scheduled_at)}</p>
+                  <p className="text-sm text-muted-foreground">{s.scheduled_at ? formatDateTime(s.scheduled_at) : 'Sin agendar'}</p>
                 </div>
                 <StatusChip label={SET_STATUS_LABELS[s.status]} colorClass={SET_STATUS_COLORS[s.status]} />
               </div>

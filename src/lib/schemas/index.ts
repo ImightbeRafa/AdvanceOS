@@ -7,11 +7,11 @@ export const loginSchema = z.object({
 
 export const createSetSchema = z.object({
   prospect_name: z.string().min(1, 'El nombre del prospecto es requerido'),
-  prospect_whatsapp: z.string().min(8, 'WhatsApp es requerido'),
+  prospect_whatsapp: z.string().min(8, 'WhatsApp es requerido').optional().or(z.literal('')),
   prospect_ig: z.string().min(1, 'Instagram del negocio es requerido'),
   prospect_web: z.string().url('URL inválida').optional().or(z.literal('')),
   closer_id: z.string().uuid('Seleccioná un closer'),
-  scheduled_at: z.string().min(1, 'La fecha y hora son requeridas'),
+  scheduled_at: z.string().min(1, 'La fecha y hora son requeridas').optional().or(z.literal('')),
   summary: z.string().min(1, 'El resumen de situación es requerido'),
   service_offered: z.enum(['advance90', 'meta_advance'], {
     message: 'Seleccioná el servicio ofrecido',

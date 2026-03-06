@@ -17,7 +17,7 @@ interface CloserDashboardProps {
 
 export function CloserDashboard({ profile, sets, commissionsTotal }: CloserDashboardProps) {
   const mySets = sets.filter((s) => s.closer_id === profile.id)
-  const pendingCalls = mySets.filter((s) => ['agendado', 'precall_enviado'].includes(s.status) && isDateToday(s.scheduled_at))
+  const pendingCalls = mySets.filter((s) => ['agendado', 'precall_enviado'].includes(s.status) && s.scheduled_at && isDateToday(s.scheduled_at))
 
   const followUps = mySets.filter((s) => {
     if (s.status !== 'seguimiento') return false
@@ -88,7 +88,7 @@ export function CloserDashboard({ profile, sets, commissionsTotal }: CloserDashb
                     <span className="font-medium text-sm">{s.prospect_name}</span>
                     <StatusChip label={SET_STATUS_LABELS[s.status]} colorClass={SET_STATUS_COLORS[s.status]} />
                   </div>
-                  <p className="text-xs text-muted-foreground mt-1">{formatDateTime(s.scheduled_at)}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{s.scheduled_at ? formatDateTime(s.scheduled_at) : 'Sin agendar'}</p>
                 </Link>
               ))}
             </div>

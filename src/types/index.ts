@@ -51,12 +51,12 @@ export interface Profile {
 export interface Set {
   id: string
   prospect_name: string
-  prospect_whatsapp: string
+  prospect_whatsapp: string | null
   prospect_ig: string
   prospect_web: string | null
   setter_id: string
   closer_id: string
-  scheduled_at: string
+  scheduled_at: string | null
   summary: string
   service_offered: ServiceType
   status: SetStatus

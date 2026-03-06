@@ -34,12 +34,12 @@ export async function createSet(data: CreateSetFormData) {
     .from('sets')
     .insert({
       prospect_name: data.prospect_name,
-      prospect_whatsapp: data.prospect_whatsapp,
+      prospect_whatsapp: data.prospect_whatsapp || null,
       prospect_ig: igClean,
       prospect_web: data.prospect_web || null,
       setter_id: user.id,
       closer_id: data.closer_id,
-      scheduled_at: data.scheduled_at,
+      scheduled_at: data.scheduled_at || null,
       summary: data.summary,
       service_offered: data.service_offered,
       is_duplicate: isDuplicate,
@@ -82,11 +82,11 @@ export async function updateSet(setId: string, data: CreateSetFormData) {
     .from('sets')
     .update({
       prospect_name: data.prospect_name,
-      prospect_whatsapp: data.prospect_whatsapp,
+      prospect_whatsapp: data.prospect_whatsapp || null,
       prospect_ig: igClean,
       prospect_web: data.prospect_web || null,
       closer_id: data.closer_id,
-      scheduled_at: data.scheduled_at,
+      scheduled_at: data.scheduled_at || null,
       summary: data.summary,
       service_offered: data.service_offered,
     })

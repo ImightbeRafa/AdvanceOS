@@ -37,11 +37,11 @@ export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalP
     values: set
       ? {
           prospect_name: set.prospect_name,
-          prospect_whatsapp: set.prospect_whatsapp,
+          prospect_whatsapp: set.prospect_whatsapp ?? '',
           prospect_ig: set.prospect_ig,
           prospect_web: set.prospect_web ?? '',
           closer_id: set.closer_id,
-          scheduled_at: set.scheduled_at.slice(0, 16),
+          scheduled_at: set.scheduled_at ? set.scheduled_at.slice(0, 16) : '',
           summary: set.summary,
           service_offered: set.service_offered,
         }
@@ -78,7 +78,7 @@ export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalP
           </div>
 
           <div className="space-y-2">
-            <Label>WhatsApp <span className="text-destructive">*</span></Label>
+            <Label>WhatsApp</Label>
             <Input {...register('prospect_whatsapp')} />
             {errors.prospect_whatsapp && <p className="text-xs text-destructive">{errors.prospect_whatsapp.message}</p>}
           </div>
@@ -111,7 +111,7 @@ export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalP
           </div>
 
           <div className="space-y-2">
-            <Label>Fecha y hora agendada <span className="text-destructive">*</span></Label>
+            <Label>Fecha y hora agendada</Label>
             <Input type="datetime-local" {...register('scheduled_at')} />
             {errors.scheduled_at && <p className="text-xs text-destructive">{errors.scheduled_at.message}</p>}
           </div>
