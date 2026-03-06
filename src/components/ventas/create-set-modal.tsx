@@ -71,7 +71,6 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
   const [duplicates, setDuplicates] = useState<{ id: string; prospect_name: string; status: string }[]>([])
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const [pendingParsed, setPendingParsed] = useState<Record<string, unknown> | null>(null)
 
   const { register, handleSubmit, setValue, watch, reset, control, formState: { errors } } = useForm<CreateSetFormData>({
     resolver: zodResolver(createSetSchema),
@@ -84,25 +83,6 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
       setValue('closer_id', closers[0].id, { shouldValidate: true })
     }
   }, [closers, setValue])
-
-  useEffect(() => {
-    if (!pendingParsed || activeTab !== 'manual') return
-
-    const p = pendingParsed
-    setPendingParsed(null)
-
-    if (p.prospect_name) setValue('prospect_name', p.prospect_name as string, { shouldValidate: true })
-    if (p.prospect_whatsapp) setValue('prospect_whatsapp', p.prospect_whatsapp as string, { shouldValidate: true })
-    if (p.prospect_ig) setValue('prospect_ig', p.prospect_ig as string, { shouldValidate: true })
-    if (p.prospect_web) setValue('prospect_web', p.prospect_web as string, { shouldValidate: true })
-    if (p.summary) setValue('summary', p.summary as string, { shouldValidate: true })
-    if (p.service_offered === 'advance90' || p.service_offered === 'meta_advance') {
-      setValue('service_offered', p.service_offered, { shouldValidate: true })
-    }
-    if (p._closerId) {
-      setValue('closer_id', p._closerId as string, { shouldValidate: true })
-    }
-  }, [pendingParsed, activeTab, setValue])
 
   async function handleIGBlur() {
     if (!igValue || igValue.length < 2) return
@@ -199,12 +179,25 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
       }
       if (!closerId && closers.length === 1) closerId = closers[0].id
 
+      console.log('AI parsed:', parsed, 'closerId:', closerId)
+
+      if (parsed.prospect_name) setValue('prospect_name', parsed.prospect_name, { shouldValidate: true })
+      if (parsed.prospect_whatsapp) setValue('prospect_whatsapp', parsed.prospect_whatsapp, { shouldValidate: true })
+      if (parsed.prospect_ig) setValue('prospect_ig', parsed.prospect_ig, { shouldValidate: true })
+      if (parsed.prospect_web) setValue('prospect_web', parsed.prospect_web, { shouldValidate: true })
+      if (parsed.summary) setValue('summary', parsed.summary, { shouldValidate: true })
+      if (parsed.service_offered === 'advance90' || parsed.service_offered === 'meta_advance') {
+        setValue('service_offered', parsed.service_offered, { shouldValidate: true })
+      }
+      if (closerId) {
+        setValue('closer_id', closerId, { shouldValidate: true })
+      }
+
       if (parsed.ig_missing) {
         toast.warning('Instagram no detectado — completalo manualmente en el formulario')
       }
 
       toast.success('Información extraída — revisá y completá los campos faltantes')
-      setPendingParsed({ ...parsed, _closerId: closerId })
       setActiveTab('manual')
     } catch (e: unknown) {
       toast.error(e instanceof Error ? e.message : 'Error al analizar')
@@ -343,7 +336,11 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
           </TabsContent>
 
           <TabsContent value="manual">
-            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
+            <div />  {/* placeholder so Radix doesn't complain */}
+          </TabsContent>
+        </Tabs>
+
+        <form onSubmit={handleSubmit(onSubmit)} className={`space-y-4 pt-2 ${activeTab !== 'manual' ? 'hidden' : ''}`}>
               <div className="space-y-2">
                 <Label>Nombre del prospecto <span className="text-destructive">*</span></Label>
                 <Input placeholder="Nombre del negocio o persona" {...register('prospect_name')} />
@@ -453,9 +450,7 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
                   {loading ? 'Creando...' : 'Crear set'}
                 </Button>
               </div>
-            </form>
-          </TabsContent>
-        </Tabs>
+        </form>
       </DialogContent>
     </Dialog>
   )
