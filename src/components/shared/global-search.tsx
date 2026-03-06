@@ -20,7 +20,7 @@ export function GlobalSearch() {
   const [query, setQuery] = useState('')
   const [results, setResults] = useState<{
     clients: { id: string; business_name: string; ig: string }[]
-    sets: { id: string; prospect_name: string; prospect_ig: string }[]
+    sets: { id: string; prospect_name: string; prospect_ig: string | null }[]
   }>({ clients: [], sets: [] })
 
   useEffect(() => {
@@ -121,7 +121,7 @@ export function GlobalSearch() {
                 <CommandItem key={s.id} onSelect={() => navigate('/ventas')}>
                   <Phone className="mr-2 h-4 w-4" />
                   <span>{s.prospect_name}</span>
-                  <span className="ml-auto text-xs text-muted-foreground">@{s.prospect_ig}</span>
+                  {s.prospect_ig && <span className="ml-auto text-xs text-muted-foreground">@{s.prospect_ig}</span>}
                 </CommandItem>
               ))}
             </CommandGroup>

@@ -52,7 +52,7 @@ export interface Set {
   id: string
   prospect_name: string
   prospect_whatsapp: string | null
-  prospect_ig: string
+  prospect_ig: string | null
   prospect_web: string | null
   setter_id: string
   closer_id: string

@@ -29,7 +29,7 @@ const DealModal = dynamic<{ set: Set; open: boolean; onOpenChange: (open: boolea
 const PaymentModal = dynamic<{ set: Set; clientId: string | null; open: boolean; onOpenChange: (open: boolean) => void }>(
   () => import('./payment-modal').then(m => ({ default: m.PaymentModal }))
 )
-const EditSetModal = dynamic<{ set: Set | null; open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[] }>(
+const EditSetModal = dynamic<{ set: Set | null; open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[]; setters: Pick<Profile, 'id' | 'full_name'>[] }>(
   () => import('./edit-set-modal').then(m => ({ default: m.EditSetModal }))
 )
 
@@ -38,11 +38,12 @@ interface SetDetailDrawerProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   closers: Pick<Profile, 'id' | 'full_name'>[]
+  setters: Pick<Profile, 'id' | 'full_name'>[]
   paymentsBySet?: Record<string, { totalGross: number; totalNet: number }>
   userRole?: UserRole
 }
 
-export function SetDetailDrawer({ set, open, onOpenChange, closers, paymentsBySet, userRole }: SetDetailDrawerProps) {
+export function SetDetailDrawer({ set, open, onOpenChange, closers, setters, paymentsBySet, userRole }: SetDetailDrawerProps) {
   const router = useRouter()
   const [showDealModal, setShowDealModal] = useState(false)
   const [showPaymentModal, setShowPaymentModal] = useState(false)
@@ -145,15 +146,19 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers, paymentsBySe
               )}
 
               <span className="text-muted-foreground">Instagram</span>
-              <a
-                href={`https://instagram.com/${set.prospect_ig}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary hover:underline flex items-center gap-1"
-              >
-                <ExternalLink className="h-3 w-3" />
-                @{set.prospect_ig}
-              </a>
+              {set.prospect_ig ? (
+                <a
+                  href={`https://instagram.com/${set.prospect_ig}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary hover:underline flex items-center gap-1"
+                >
+                  <ExternalLink className="h-3 w-3" />
+                  @{set.prospect_ig}
+                </a>
+              ) : (
+                <span className="text-muted-foreground">—</span>
+              )}
 
               {set.prospect_web && (
                 <>
@@ -380,6 +385,7 @@ export function SetDetailDrawer({ set, open, onOpenChange, closers, paymentsBySe
         open={showEditModal}
         onOpenChange={setShowEditModal}
         closers={closers}
+        setters={setters}
       />
     </>
   )

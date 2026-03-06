@@ -26,9 +26,10 @@ interface EditSetModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   closers: Pick<Profile, 'id' | 'full_name'>[]
+  setters: Pick<Profile, 'id' | 'full_name'>[]
 }
 
-export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalProps) {
+export function EditSetModal({ set, open, onOpenChange, closers, setters }: EditSetModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
@@ -41,6 +42,7 @@ export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalP
           prospect_ig: set.prospect_ig ?? '',
           prospect_web: set.prospect_web ?? '',
           closer_id: set.closer_id,
+          setter_id: set.setter_id,
           scheduled_at: set.scheduled_at ? set.scheduled_at.slice(0, 16) : '',
           summary: set.summary,
           service_offered: set.service_offered,
@@ -114,6 +116,27 @@ export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalP
               )}
             />
             {errors.closer_id && <p className="text-xs text-destructive">{errors.closer_id.message}</p>}
+          </div>
+
+          <div className="space-y-2">
+            <Label>Setter asignado <span className="text-destructive">*</span></Label>
+            <Controller
+              name="setter_id"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value || ''} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar setter" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-surface-3">
+                    {setters.map((s) => (
+                      <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
+            {errors.setter_id && <p className="text-xs text-destructive">{errors.setter_id.message}</p>}
           </div>
 
           <div className="space-y-2">

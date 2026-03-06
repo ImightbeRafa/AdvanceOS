@@ -70,6 +70,7 @@ export default async function VentasPage() {
         paymentsBySet={paymentsBySet}
         allPayments={allPayments}
         userRole={profile.role}
+        userId={user.id}
       />
     </div>
   )

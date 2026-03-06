@@ -29,10 +29,10 @@ import {
 } from '@/components/ui/dropdown-menu'
 import dynamic from 'next/dynamic'
 
-const CreateSetModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[] }>(
+const CreateSetModal = dynamic<{ open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[]; setters: Pick<Profile, 'id' | 'full_name'>[]; currentUserId: string }>(
   () => import('./create-set-modal').then(m => ({ default: m.CreateSetModal }))
 )
-const SetDetailDrawer = dynamic<{ set: Set | null; open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[]; paymentsBySet?: Record<string, { totalGross: number; totalNet: number }>; userRole?: UserRole }>(
+const SetDetailDrawer = dynamic<{ set: Set | null; open: boolean; onOpenChange: (open: boolean) => void; closers: Pick<Profile, 'id' | 'full_name'>[]; setters: Pick<Profile, 'id' | 'full_name'>[]; paymentsBySet?: Record<string, { totalGross: number; totalNet: number }>; userRole?: UserRole }>(
   () => import('./set-detail-drawer').then(m => ({ default: m.SetDetailDrawer }))
 )
 const PaymentModal = dynamic<{ set: Set; clientId: string | null; open: boolean; onOpenChange: (open: boolean) => void }>(
@@ -56,6 +56,7 @@ interface VentasDashboardProps {
   paymentsBySet: Record<string, { totalGross: number; totalNet: number }>
   allPayments: PaymentRecord[]
   userRole: UserRole
+  userId: string
 }
 
 function getLatestDeal(s: Set): Deal | null {
@@ -64,7 +65,7 @@ function getLatestDeal(s: Set): Deal | null {
   return s.deal
 }
 
-export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPayments, userRole }: VentasDashboardProps) {
+export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPayments, userRole, userId }: VentasDashboardProps) {
   const router = useRouter()
   const searchParams = useSearchParams()
   const [showCreateModal, setShowCreateModal] = useState(false)
@@ -286,7 +287,9 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
     { key: 'setter', label: 'Setter', render: (s) => <span className="text-sm">{(s.setter as unknown as Profile)?.full_name ?? '—'}</span> },
     { key: 'scheduled', label: 'Fecha llamada', sortable: true, render: (s) => <span className="text-sm text-muted-foreground">{s.scheduled_at ? formatDateTime(s.scheduled_at) : 'Sin agendar'}</span>, getValue: (s) => s.scheduled_at ? new Date(s.scheduled_at).getTime() : 0 },
     { key: 'ig', label: 'IG', render: (s) => (
-      <a href={`https://instagram.com/${s.prospect_ig}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline" onClick={(e) => e.stopPropagation()}>@{s.prospect_ig}</a>
+      s.prospect_ig
+        ? <a href={`https://instagram.com/${s.prospect_ig}`} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline" onClick={(e) => e.stopPropagation()}>@{s.prospect_ig}</a>
+        : <span className="text-sm text-muted-foreground">—</span>
     ) },
     { key: 'saldo', label: 'Saldo', render: (s) => {
       if (s.status !== 'closed_pendiente') return <span className="text-sm text-muted-foreground">—</span>
@@ -593,8 +596,8 @@ export function VentasDashboard({ sets, closers, setters, paymentsBySet, allPaym
         </TabsContent>
       </Tabs>
 
-      <CreateSetModal open={showCreateModal} onOpenChange={setShowCreateModal} closers={closers} />
-      <SetDetailDrawer set={selectedSet} open={!!selectedSet} onOpenChange={(open: boolean) => { if (!open) setSelectedSet(null) }} closers={closers} paymentsBySet={paymentsBySet} userRole={userRole} />
+      <CreateSetModal open={showCreateModal} onOpenChange={setShowCreateModal} closers={closers} setters={setters} currentUserId={userId} />
+      <SetDetailDrawer set={selectedSet} open={!!selectedSet} onOpenChange={(open: boolean) => { if (!open) setSelectedSet(null) }} closers={closers} setters={setters} paymentsBySet={paymentsBySet} userRole={userRole} />
       {paymentSet && (
         <PaymentModal set={paymentSet} clientId={null} open={!!paymentSet} onOpenChange={(open: boolean) => { if (!open) setPaymentSet(null) }} />
       )}

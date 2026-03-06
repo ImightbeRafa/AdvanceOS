@@ -11,6 +11,7 @@ export const createSetSchema = z.object({
   prospect_ig: z.string().optional().or(z.literal('')),
   prospect_web: z.string().url('URL inválida').optional().or(z.literal('')),
   closer_id: z.string().uuid('Seleccioná un closer'),
+  setter_id: z.string().uuid('Seleccioná un setter'),
   scheduled_at: z.string().min(1, 'La fecha y hora son requeridas').optional().or(z.literal('')),
   summary: z.string().min(1, 'El resumen de situación es requerido'),
   service_offered: z.enum(['advance90', 'meta_advance'], {

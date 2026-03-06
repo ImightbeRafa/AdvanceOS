@@ -31,6 +31,8 @@ interface CreateSetModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   closers: Pick<Profile, 'id' | 'full_name'>[]
+  setters: Pick<Profile, 'id' | 'full_name'>[]
+  currentUserId: string
 }
 
 const COMPRESS_MAX_DIM = 1600
@@ -63,7 +65,7 @@ function compressImage(file: File): Promise<string> {
   })
 }
 
-export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalProps) {
+export function CreateSetModal({ open, onOpenChange, closers, setters, currentUserId }: CreateSetModalProps) {
   const router = useRouter()
   const [loading, setLoading] = useState(false)
   const [parsing, setParsing] = useState(false)
@@ -85,6 +87,10 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
       setValue('closer_id', closers[0].id, { shouldValidate: true })
     }
   }, [closers, setValue])
+
+  useEffect(() => {
+    setValue('setter_id', currentUserId, { shouldValidate: true })
+  }, [currentUserId, setValue])
 
   async function handleIGBlur() {
     if (!igValue || igValue.length < 2) { setDuplicates([]); return }
@@ -406,6 +412,27 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
                   )}
                 />
                 {errors.closer_id && <p className="text-xs text-destructive">{errors.closer_id.message}</p>}
+              </div>
+
+              <div className="space-y-2">
+                <Label>Setter asignado <span className="text-destructive">*</span></Label>
+                <Controller
+                  name="setter_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value || ''} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar setter" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-surface-3">
+                        {setters.map((s) => (
+                          <SelectItem key={s.id} value={s.id}>{s.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
+                {errors.setter_id && <p className="text-xs text-destructive">{errors.setter_id.message}</p>}
               </div>
 
               <div className="space-y-2">
