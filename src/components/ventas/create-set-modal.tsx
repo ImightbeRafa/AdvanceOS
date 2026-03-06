@@ -178,6 +178,16 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
         setValue('service_offered', parsed.service_offered, { shouldValidate: true })
       }
 
+      if (parsed.closer_name && closers.length > 0) {
+        const normalise = (s: string) => s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim()
+        const target = normalise(parsed.closer_name)
+        const match = closers.find((c) => normalise(c.full_name) === target)
+          || closers.find((c) => normalise(c.full_name).includes(target) || target.includes(normalise(c.full_name)))
+        if (match) {
+          setValue('closer_id', match.id, { shouldValidate: true })
+        }
+      }
+
       if (parsed.ig_missing) {
         toast.warning('Instagram no detectado — completalo manualmente en el formulario')
       }
@@ -226,7 +236,7 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="paste">
+          <TabsContent value="paste" forceMount className={activeTab !== 'paste' ? 'hidden' : ''}>
             <div className="space-y-4 pt-2">
               {/* Image upload area */}
               <div className="space-y-2">
@@ -320,7 +330,7 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
             </div>
           </TabsContent>
 
-          <TabsContent value="manual">
+          <TabsContent value="manual" forceMount className={activeTab !== 'manual' ? 'hidden' : ''}>
             <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 pt-2">
               <div className="space-y-2">
                 <Label>Nombre del prospecto <span className="text-destructive">*</span></Label>

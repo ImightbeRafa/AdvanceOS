@@ -12,7 +12,8 @@ Dado un bloque de texto con información de un prospecto, extraé los siguientes
 - prospect_ig: usuario de Instagram si se menciona, sin @ (o null)
 - prospect_web: URL del sitio web si se menciona (o null)
 - summary: resumen de la situación del prospecto. Usá la información del texto para crear un resumen claro y conciso que describa el negocio, situación actual, y objetivos. Máximo 3-4 oraciones.
-- service_offered: si se menciona un servicio específico, usá "advance90" o "meta_advance" (o null)
+- service_offered: si se menciona un servicio específico, usá "advance90" o "meta_advance". También mapeá: "Meta Advance" o "MA" → "meta_advance", "Advance90" o "A90" → "advance90" (o null)
+- closer_name: nombre del closer asignado si se menciona (o null). Buscá patrones como "Closer: [nombre]" o "Closer [nombre]"
 
 Respondé ÚNICAMENTE con un objeto JSON válido, sin markdown, sin explicaciones, sin backticks. Solo el JSON.
 Si un campo no se puede determinar del texto, usá null.`
@@ -52,6 +53,7 @@ Además del resumen formateado, extraé estos campos adicionales y respondé ÚN
 - prospect_whatsapp: número de WhatsApp si se menciona (o null)
 - prospect_web: URL del sitio web si se menciona (o null)
 - service_offered: "meta_advance" si clasificaste como MA, "advance90" si clasificaste como A90
+- closer_name: nombre del closer asignado si se menciona en la conversación (o null)
 - summary: el resumen completo formateado como se indicó arriba (Nombre – IG + prosa + tag MA o A90)
 
 Solo el JSON.`
@@ -159,6 +161,7 @@ export async function POST(request: Request) {
       prospect_web: parsed.prospect_web || '',
       summary: parsed.summary || '',
       service_offered: parsed.service_offered || null,
+      closer_name: parsed.closer_name || null,
       ig_missing: !igValue,
     })
   } catch (error) {
