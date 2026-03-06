@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { useForm } from 'react-hook-form'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createSetSchema, type CreateSetFormData } from '@/lib/schemas'
 import { updateSet } from '@/lib/actions/sets'
@@ -32,7 +32,7 @@ export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalP
   const router = useRouter()
   const [loading, setLoading] = useState(false)
 
-  const { register, handleSubmit, setValue, formState: { errors } } = useForm<CreateSetFormData>({
+  const { register, handleSubmit, control, formState: { errors } } = useForm<CreateSetFormData>({
     resolver: zodResolver(createSetSchema),
     values: set
       ? {
@@ -97,16 +97,22 @@ export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalP
 
           <div className="space-y-2">
             <Label>Closer asignado <span className="text-destructive">*</span></Label>
-            <Select defaultValue={set.closer_id} onValueChange={(v) => setValue('closer_id', v)}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-surface-3">
-                {closers.map((c) => (
-                  <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Controller
+              name="closer_id"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value || ''} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar closer" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-surface-3">
+                    {closers.map((c) => (
+                      <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {errors.closer_id && <p className="text-xs text-destructive">{errors.closer_id.message}</p>}
           </div>
 
@@ -118,15 +124,21 @@ export function EditSetModal({ set, open, onOpenChange, closers }: EditSetModalP
 
           <div className="space-y-2">
             <Label>Servicio ofrecido <span className="text-destructive">*</span></Label>
-            <Select defaultValue={set.service_offered} onValueChange={(v) => setValue('service_offered', v as 'advance90' | 'meta_advance')}>
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent className="bg-surface-3">
-                <SelectItem value="advance90">Advance90</SelectItem>
-                <SelectItem value="meta_advance">Meta Advance</SelectItem>
-              </SelectContent>
-            </Select>
+            <Controller
+              name="service_offered"
+              control={control}
+              render={({ field }) => (
+                <Select value={field.value || ''} onValueChange={field.onChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar servicio" />
+                  </SelectTrigger>
+                  <SelectContent className="bg-surface-3">
+                    <SelectItem value="advance90">Advance90</SelectItem>
+                    <SelectItem value="meta_advance">Meta Advance</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
+            />
             {errors.service_offered && <p className="text-xs text-destructive">{errors.service_offered.message}</p>}
           </div>
 

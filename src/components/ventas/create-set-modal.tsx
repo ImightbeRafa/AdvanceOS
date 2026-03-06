@@ -1,7 +1,7 @@
 'use client'
 
-import { useState, useRef, useCallback } from 'react'
-import { useForm } from 'react-hook-form'
+import { useState, useRef, useCallback, useEffect } from 'react'
+import { useForm, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createSetSchema, type CreateSetFormData } from '@/lib/schemas'
 import { createSet, checkDuplicateIG } from '@/lib/actions/sets'
@@ -69,15 +69,20 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
   const [images, setImages] = useState<{ file: File; preview: string }[]>([])
   const [activeTab, setActiveTab] = useState('manual')
   const [duplicates, setDuplicates] = useState<{ id: string; prospect_name: string; status: string }[]>([])
-  const [serviceKey, setServiceKey] = useState(0)
   const [dragOver, setDragOver] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const { register, handleSubmit, setValue, watch, reset, formState: { errors } } = useForm<CreateSetFormData>({
+  const { register, handleSubmit, setValue, watch, reset, control, formState: { errors } } = useForm<CreateSetFormData>({
     resolver: zodResolver(createSetSchema),
   })
 
   const igValue = watch('prospect_ig')
+
+  useEffect(() => {
+    if (closers.length === 1) {
+      setValue('closer_id', closers[0].id, { shouldValidate: true })
+    }
+  }, [closers, setValue])
 
   async function handleIGBlur() {
     if (!igValue || igValue.length < 2) return
@@ -164,14 +169,13 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
 
       const parsed = await res.json()
 
-      if (parsed.prospect_name) setValue('prospect_name', parsed.prospect_name)
-      if (parsed.prospect_whatsapp) setValue('prospect_whatsapp', parsed.prospect_whatsapp)
-      if (parsed.prospect_ig) setValue('prospect_ig', parsed.prospect_ig)
-      if (parsed.prospect_web) setValue('prospect_web', parsed.prospect_web)
-      if (parsed.summary) setValue('summary', parsed.summary)
+      if (parsed.prospect_name) setValue('prospect_name', parsed.prospect_name, { shouldValidate: true })
+      if (parsed.prospect_whatsapp) setValue('prospect_whatsapp', parsed.prospect_whatsapp, { shouldValidate: true })
+      if (parsed.prospect_ig) setValue('prospect_ig', parsed.prospect_ig, { shouldValidate: true })
+      if (parsed.prospect_web) setValue('prospect_web', parsed.prospect_web, { shouldValidate: true })
+      if (parsed.summary) setValue('summary', parsed.summary, { shouldValidate: true })
       if (parsed.service_offered === 'advance90' || parsed.service_offered === 'meta_advance') {
-        setValue('service_offered', parsed.service_offered)
-        setServiceKey((k) => k + 1)
+        setValue('service_offered', parsed.service_offered, { shouldValidate: true })
       }
 
       if (parsed.ig_missing) {
@@ -364,16 +368,22 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
 
               <div className="space-y-2">
                 <Label>Closer asignado <span className="text-destructive">*</span></Label>
-                <Select onValueChange={(v) => setValue('closer_id', v)}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar closer" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-surface-3">
-                    {closers.map((c) => (
-                      <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="closer_id"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value || ''} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar closer" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-surface-3">
+                        {closers.map((c) => (
+                          <SelectItem key={c.id} value={c.id}>{c.full_name}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {errors.closer_id && <p className="text-xs text-destructive">{errors.closer_id.message}</p>}
               </div>
 
@@ -385,15 +395,21 @@ export function CreateSetModal({ open, onOpenChange, closers }: CreateSetModalPr
 
               <div className="space-y-2">
                 <Label>Servicio ofrecido <span className="text-destructive">*</span></Label>
-                <Select key={serviceKey} onValueChange={(v) => setValue('service_offered', v as 'advance90' | 'meta_advance')} value={watch('service_offered') || undefined}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Seleccionar servicio" />
-                  </SelectTrigger>
-                  <SelectContent className="bg-surface-3">
-                    <SelectItem value="advance90">Advance90</SelectItem>
-                    <SelectItem value="meta_advance">Meta Advance</SelectItem>
-                  </SelectContent>
-                </Select>
+                <Controller
+                  name="service_offered"
+                  control={control}
+                  render={({ field }) => (
+                    <Select value={field.value || ''} onValueChange={field.onChange}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Seleccionar servicio" />
+                      </SelectTrigger>
+                      <SelectContent className="bg-surface-3">
+                        <SelectItem value="advance90">Advance90</SelectItem>
+                        <SelectItem value="meta_advance">Meta Advance</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                />
                 {errors.service_offered && <p className="text-xs text-destructive">{errors.service_offered.message}</p>}
               </div>
 
