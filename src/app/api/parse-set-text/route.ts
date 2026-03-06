@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { createClient } from '@/lib/supabase/server'
 
 const XAI_API_URL = 'https://api.x.ai/v1/chat/completions'
-const XAI_MODEL = 'grok-4-1'
+const XAI_MODEL = 'grok-4-1-fast-non-reasoning'
 
 const TEXT_SYSTEM_PROMPT = `Sos un asistente que extrae información estructurada de texto sobre prospectos de negocio.
 Dado un bloque de texto con información de un prospecto, extraé los siguientes campos en formato JSON:
